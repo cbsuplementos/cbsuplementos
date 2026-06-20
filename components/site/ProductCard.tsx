@@ -46,7 +46,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           priority={priority}
-          className={`object-cover transition-transform duration-700 group-hover:scale-105 ${isOutOfStock ? "opacity-60" : ""}`}
+          className={`object-contain transition-transform duration-700 group-hover:scale-105 ${isOutOfStock ? "opacity-60" : ""}`}
         />
 
         {/* Badges empilhados */}

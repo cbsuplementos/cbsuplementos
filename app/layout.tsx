@@ -102,7 +102,7 @@ const storeSchema = {
   "@context": "https://schema.org",
   "@type": "OnlineStore",
   name: "CB Suplementos",
-  image: "https://cbsuplementos.up.railway.app/opengraph-image",
+  image: "https://cbsuplementos.up.railway.app/og-image.png",
   "@id": "https://cbsuplementos.up.railway.app",
   url: "https://cbsuplementos.up.railway.app",
   telephone: "+559199266197",
