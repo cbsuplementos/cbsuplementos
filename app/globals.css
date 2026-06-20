@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Paleta CB Suplementos — Dourado metálico sobre preto profundo
+ *
+ * Identidade visual oficial extraída da logomarca:
+ * - Dourado vibrante (#D4A24C / #CF9724) — assinatura da marca
+ * - Preto profundo (#0A0A0A) — fundo principal
+ * - Cinza-escuro (#161616) — fundos alternativos
+ *
+ * Estética: premium fitness, atlético, masculino, sólido.
+ */
+@layer base {
+  :root {
+    /* Cores principais */
+    --color-noir: 10 10 10;            /* #0A0A0A — preto profundo (fundo) */
+    --color-gold: 212 162 76;          /* #D4A24C — dourado principal (CTA / destaque) */
+    --color-gold-light: 242 201 76;    /* #F2C94C — dourado claro (hover / brilho) */
+    --color-gold-dark: 166 124 29;     /* #A67C1D — dourado escuro (bronze / borders) */
+
+    /* Neutros (tema dark) */
+    --color-graphite: 22 22 22;        /* #161616 — fundo de seção alternativo */
+    --color-charcoal: 38 38 38;        /* #262626 — cards / inputs */
+    --color-cool-gray: 156 163 175;    /* #9CA3AF — texto secundário */
+
+    /* Estado */
+    --color-success: 34 197 94;
+    --color-warning: 250 204 21;
+    --color-error: 239 68 68;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings usam Bebas Neue (display impactante atlético) */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight uppercase;
+  }
+}
+
+/**
+ * Utilitários customizados reutilizáveis
+ */
+@layer components {
+  .container-padded {
+    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Botão primário — fundo dourado, texto preto */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3
+           bg-gold text-noir font-bold uppercase tracking-wider
+           transition-all duration-200
+           hover:bg-gold-light hover:shadow-[0_0_20px_rgba(212,162,76,0.45)]
+           focus:outline-none focus:ring-2
+           focus:ring-gold focus:ring-offset-2 focus:ring-offset-noir;
+  }
+
+  /* Botão secundário — borda dourada, texto dourado */
+  .btn-outline {
+    @apply inline-flex items-center justify-center px-6 py-3
+           border-2 border-gold text-gold font-bold uppercase tracking-wider
+           transition-all duration-200
+           hover:bg-gold hover:text-noir
+           focus:outline-none focus:ring-2
+           focus:ring-gold focus:ring-offset-2 focus:ring-offset-noir;
+  }
+
+  /* Efeito glow sutil dourado */
+  .glow-gold {
+    box-shadow: 0 0 30px rgba(212, 162, 76, 0.3);
+  }
+
+  /* Texto com glow dourado (para hero/headlines) */
+  .text-glow {
+    text-shadow: 0 0 14px rgba(212, 162, 76, 0.55);
+  }
+
+  /* Linha decorativa dourada (separadores) */
+  .gold-divider {
+    @apply inline-block h-px bg-gold align-middle;
+  }
+}
