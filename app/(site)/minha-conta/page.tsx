@@ -44,37 +44,37 @@ export default async function MinhaContaPage() {
     SHIPPED: { label: "Enviado", color: "bg-purple-100 text-purple-800" },
     DELIVERED: { label: "Entregue", color: "bg-emerald-100 text-emerald-800" },
     CANCELLED: { label: "Cancelado", color: "bg-red-100 text-red-800" },
-    REFUNDED: { label: "Reembolsado", color: "bg-neutral-100 text-neutral-800" },
+    REFUNDED: { label: "Reembolsado", color: "bg-neutral-200 text-neutral-800" },
   };
 
   return (
-    <section className="min-h-screen bg-neutral-50">
+    <section className="min-h-screen bg-noir">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold font-display text-neutral-900">
+          <h1 className="text-2xl sm:text-3xl font-bold font-display text-white">
             Olá, {customer.name.split(" ")[0]}!
           </h1>
-          <p className="text-neutral-500 mt-1">Bem-vindo de volta à CB Suplementos.</p>
+          <p className="text-cool-gray mt-1">Bem-vindo de volta à CB Suplementos.</p>
         </div>
 
         {/* Cards de navegação */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-          <Link href="/minha-conta/pedidos" className="bg-white p-6 rounded-xl border border-neutral-200 hover:border-amber-400 hover:shadow-md transition-all">
+          <Link href="/minha-conta/pedidos" className="bg-charcoal p-6 rounded-xl border border-gold/15 hover:border-gold hover:shadow-md transition-all">
             <div className="text-3xl mb-2">📦</div>
-            <h2 className="font-semibold text-neutral-900">Meus Pedidos</h2>
-            <p className="text-xs text-neutral-500 mt-1">{customer._count.orders} {customer._count.orders === 1 ? "pedido" : "pedidos"}</p>
+            <h2 className="font-semibold text-white">Meus Pedidos</h2>
+            <p className="text-xs text-cool-gray mt-1">{customer._count.orders} {customer._count.orders === 1 ? "pedido" : "pedidos"}</p>
           </Link>
 
-          <Link href="/carrinho" className="bg-white p-6 rounded-xl border border-neutral-200 hover:border-amber-400 hover:shadow-md transition-all">
+          <Link href="/carrinho" className="bg-charcoal p-6 rounded-xl border border-gold/15 hover:border-gold hover:shadow-md transition-all">
             <div className="text-3xl mb-2">🛒</div>
-            <h2 className="font-semibold text-neutral-900">Carrinho</h2>
-            <p className="text-xs text-neutral-500 mt-1">Ver itens no carrinho</p>
+            <h2 className="font-semibold text-white">Carrinho</h2>
+            <p className="text-xs text-cool-gray mt-1">Ver itens no carrinho</p>
           </Link>
 
-          <Link href="/produtos" className="bg-white p-6 rounded-xl border border-neutral-200 hover:border-amber-400 hover:shadow-md transition-all">
+          <Link href="/produtos" className="bg-charcoal p-6 rounded-xl border border-gold/15 hover:border-gold hover:shadow-md transition-all">
             <div className="text-3xl mb-2">🛍️</div>
-            <h2 className="font-semibold text-neutral-900">Comprar</h2>
-            <p className="text-xs text-neutral-500 mt-1">Ver produtos disponíveis</p>
+            <h2 className="font-semibold text-white">Comprar</h2>
+            <p className="text-xs text-cool-gray mt-1">Ver produtos disponíveis</p>
           </Link>
         </div>
 
@@ -82,24 +82,24 @@ export default async function MinhaContaPage() {
         {customer.orders.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-neutral-900">Últimos pedidos</h2>
-              <Link href="/minha-conta/pedidos" className="text-sm text-amber-600 hover:text-amber-700">
+              <h2 className="text-lg font-semibold text-white">Últimos pedidos</h2>
+              <Link href="/minha-conta/pedidos" className="text-sm text-gold hover:text-gold-light">
                 Ver todos →
               </Link>
             </div>
-            <div className="bg-white rounded-xl border border-neutral-200 divide-y divide-neutral-100">
+            <div className="bg-charcoal rounded-xl border border-gold/15 divide-y divide-white/10">
               {customer.orders.map((order) => {
                 const s = statusLabels[order.status] || statusLabels.PENDING;
                 return (
                   <Link
                     key={order.id}
                     href={`/minha-conta/pedidos/${order.orderNumber}`}
-                    className="block p-4 hover:bg-neutral-50 transition-colors"
+                    className="block p-4 hover:bg-noir transition-colors"
                   >
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div>
-                        <p className="font-mono text-sm font-medium text-neutral-900">{order.orderNumber}</p>
-                        <p className="text-xs text-neutral-500 mt-0.5">
+                        <p className="font-mono text-sm font-medium text-white">{order.orderNumber}</p>
+                        <p className="text-xs text-cool-gray mt-0.5">
                           {new Date(order.createdAt).toLocaleDateString("pt-BR", {
                             day: "2-digit", month: "long", year: "numeric"
                           })}
@@ -109,7 +109,7 @@ export default async function MinhaContaPage() {
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${s.color}`}>
                           {s.label}
                         </span>
-                        <span className="font-semibold text-neutral-900">{fmt(order.total)}</span>
+                        <span className="font-semibold text-white">{fmt(order.total)}</span>
                       </div>
                     </div>
                   </Link>

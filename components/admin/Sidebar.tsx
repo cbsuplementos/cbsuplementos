@@ -78,7 +78,7 @@ export default function AdminSidebar({ user }: SidebarProps) {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-30 p-2 bg-noir text-gold rounded shadow-lg"
+        className="lg:hidden fixed top-4 left-4 z-30 p-2 bg-white text-neutral-900 border border-neutral-200 rounded shadow-lg"
         aria-label="Abrir menu"
       >
         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -94,12 +94,12 @@ export default function AdminSidebar({ user }: SidebarProps) {
       />
 
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 z-50 h-full w-64 bg-noir text-white flex flex-col transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+      <aside className={`fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-neutral-200 text-neutral-900 flex flex-col transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         {/* Logo */}
-        <div className="p-5 border-b border-gold/20">
+        <div className="p-5 border-b border-neutral-200">
           <Link href="/admin/dashboard" className="block" aria-label="Painel CB Suplementos">
             <Logo variant="compact" className="h-10 w-auto" />
-            <p className="text-[10px] uppercase tracking-[0.25em] text-gold-light/70 mt-3">Painel Administrativo</p>
+            <p className="text-[10px] uppercase tracking-[0.25em] text-gold-dark mt-3">Painel Administrativo</p>
           </Link>
         </div>
 
@@ -113,7 +113,7 @@ export default function AdminSidebar({ user }: SidebarProps) {
                   <Link
                     href={item.href}
                     onClick={() => setIsOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded text-sm transition-colors duration-200 ${isActive ? "bg-gold/10 text-gold border-l-2 border-gold" : "text-white/70 hover:bg-white/5 hover:text-white"}`}
+                    className={`flex items-center gap-3 px-4 py-3 rounded text-sm transition-colors duration-200 ${isActive ? "bg-gold/15 text-gold-dark border-l-2 border-gold font-medium" : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"}`}
                   >
                     {item.icon}
                     {item.name}
@@ -125,15 +125,15 @@ export default function AdminSidebar({ user }: SidebarProps) {
         </nav>
 
         {/* Usuário + Logout */}
-        <div className="p-4 border-t border-gold/20">
+        <div className="p-4 border-t border-neutral-200">
           <div className="px-4 py-3 mb-2">
-            <p className="text-sm text-white truncate">{user.name}</p>
-            <p className="text-xs text-white/50 truncate">{user.email}</p>
+            <p className="text-sm text-neutral-900 truncate font-medium">{user.name}</p>
+            <p className="text-xs text-neutral-500 truncate">{user.email}</p>
           </div>
           <button
             type="button"
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded text-sm text-white/70 hover:bg-white/5 hover:text-red-300 transition-colors duration-200"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded text-sm text-neutral-600 hover:bg-red-50 hover:text-red-600 transition-colors duration-200"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />

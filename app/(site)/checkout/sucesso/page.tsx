@@ -61,10 +61,10 @@ function SuccessContent() {
 
   if (loading) {
     return (
-      <section className="min-h-screen bg-neutral-50 flex items-center justify-center">
+      <section className="min-h-screen bg-noir flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-neutral-300 border-t-amber-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-neutral-500">Carregando pedido...</p>
+          <div className="w-8 h-8 border-2 border-white/15 border-t-gold rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-cool-gray">Carregando pedido...</p>
         </div>
       </section>
     );
@@ -73,17 +73,17 @@ function SuccessContent() {
   // ============ PAGAMENTO CONFIRMADO ============
   if (paid) {
     return (
-      <section className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
+      <section className="min-h-screen bg-noir flex items-center justify-center px-4">
         <div className="max-w-md w-full text-center">
           <div className="text-6xl mb-4">✅</div>
           <h1 className="text-2xl sm:text-3xl font-bold font-display text-green-700 mb-2">
             Pagamento confirmado!
           </h1>
-          <p className="text-neutral-600 mb-6">
+          <p className="text-cool-gray mb-6">
             Pedido <strong>{pedido}</strong> recebido. Em breve entraremos em contato
             para combinar a entrega.
           </p>
-          <Link href="/produtos" className="block py-3 bg-neutral-900 text-white rounded-lg font-medium hover:bg-neutral-800">
+          <Link href="/produtos" className="block py-3 bg-gold text-noir font-bold uppercase tracking-wider rounded-lg hover:bg-gold-light">
             Continuar comprando
           </Link>
         </div>
@@ -94,26 +94,26 @@ function SuccessContent() {
   // ============ PIX AGUARDANDO PAGAMENTO ============
   if (metodo === "pix") {
     return (
-      <section className="min-h-screen bg-neutral-50 py-8 px-4">
+      <section className="min-h-screen bg-noir py-8 px-4">
         <div className="max-w-md mx-auto">
           {/* Header com status amarelo */}
           <div className="text-center mb-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium mb-4">
-              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold/15 text-gold-light rounded-full text-sm font-medium mb-4">
+              <div className="w-2 h-2 bg-gold rounded-full animate-pulse" />
               Aguardando pagamento
             </div>
-            <h1 className="text-2xl font-bold font-display text-neutral-900 mb-1">
+            <h1 className="text-2xl font-bold font-display text-white mb-1">
               Pedido criado
             </h1>
-            <p className="text-sm text-neutral-500">Número: <strong>{pedido}</strong></p>
+            <p className="text-sm text-cool-gray">Número: <strong>{pedido}</strong></p>
           </div>
 
           {/* Alerta */}
-          <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mb-6">
-            <p className="text-sm text-amber-900 font-medium mb-1">
+          <div className="bg-gold/10 border-2 border-gold/30 rounded-xl p-4 mb-6">
+            <p className="text-sm text-gold-light font-medium mb-1">
               ⚠️ Seu pedido ainda não foi pago
             </p>
-            <p className="text-xs text-amber-800">
+            <p className="text-xs text-gold-light">
               Conclua o pagamento via Pix abaixo. Sem o pagamento confirmado,
               seu pedido será cancelado em 30 minutos.
             </p>
@@ -121,11 +121,11 @@ function SuccessContent() {
 
           {/* QR Code gerado a partir do código Pix */}
           {qrImageUrl && (
-            <div className="bg-white p-6 rounded-xl border border-neutral-200 mb-4 text-center">
-              <h2 className="text-base font-semibold text-neutral-900 mb-3">
+            <div className="bg-charcoal p-6 rounded-xl border border-gold/15 mb-4 text-center">
+              <h2 className="text-base font-semibold text-white mb-3">
                 Escaneie o QR Code
               </h2>
-              <div className="w-[250px] h-[250px] mx-auto mb-3 bg-white p-2 rounded-lg border border-neutral-200">
+              <div className="w-[250px] h-[250px] mx-auto mb-3 bg-white p-2 rounded-lg border border-gold/15">
                 <img
                   src={qrImageUrl}
                   alt="QR Code Pix"
@@ -134,7 +134,7 @@ function SuccessContent() {
                   className="w-full h-full object-contain"
                 />
               </div>
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-cool-gray">
                 Abra o app do seu banco → Pix → Pagar com QR Code
               </p>
             </div>
@@ -142,17 +142,17 @@ function SuccessContent() {
 
           {/* Código copia-e-cola */}
           {pixCode && (
-            <div className="bg-white p-4 rounded-xl border border-neutral-200 mb-4">
-              <p className="text-sm font-medium text-neutral-700 mb-2">
+            <div className="bg-charcoal p-4 rounded-xl border border-gold/15 mb-4">
+              <p className="text-sm font-medium text-white/80 mb-2">
                 Ou copie o código Pix:
               </p>
-              <div className="bg-neutral-50 p-3 rounded-lg break-all text-xs text-neutral-700 font-mono mb-3 max-h-24 overflow-y-auto">
+              <div className="bg-noir p-3 rounded-lg break-all text-xs text-white/80 font-mono mb-3 max-h-24 overflow-y-auto">
                 {pixCode}
               </div>
               <button
                 onClick={copyPix}
                 className={`w-full py-3 rounded-lg text-sm font-semibold transition-colors ${
-                  copied ? "bg-green-600 text-white" : "bg-neutral-900 text-white hover:bg-neutral-800"
+                  copied ? "bg-green-600 text-white" : "bg-gold text-noir hover:bg-gold-light"
                 }`}
               >
                 {copied ? "✓ Copiado!" : "Copiar código Pix"}
@@ -167,7 +167,7 @@ function SuccessContent() {
                 href={ticketUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-amber-600 underline hover:text-amber-700"
+                className="text-sm text-gold underline hover:text-gold-light"
               >
                 Ou pague pelo site do Mercado Pago →
               </a>
@@ -186,7 +186,7 @@ function SuccessContent() {
           </div>
 
           <div className="mt-6 text-center">
-            <Link href="/produtos" className="text-sm text-neutral-500 underline">
+            <Link href="/produtos" className="text-sm text-cool-gray underline">
               Voltar aos produtos
             </Link>
           </div>
@@ -197,12 +197,12 @@ function SuccessContent() {
 
   // ============ OUTRO MÉTODO ============
   return (
-    <section className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
+    <section className="min-h-screen bg-noir flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
         <div className="text-5xl mb-4">📋</div>
-        <h1 className="text-2xl font-bold font-display text-neutral-900 mb-2">Pedido criado</h1>
-        <p className="text-neutral-600 mb-6">Número: <strong>{pedido}</strong></p>
-        <Link href="/produtos" className="block py-3 bg-neutral-900 text-white rounded-lg font-medium hover:bg-neutral-800">
+        <h1 className="text-2xl font-bold font-display text-white mb-2">Pedido criado</h1>
+        <p className="text-cool-gray mb-6">Número: <strong>{pedido}</strong></p>
+        <Link href="/produtos" className="block py-3 bg-gold text-noir font-bold uppercase tracking-wider rounded-lg hover:bg-gold-light">
           Voltar aos produtos
         </Link>
       </div>

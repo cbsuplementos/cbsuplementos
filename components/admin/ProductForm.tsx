@@ -207,7 +207,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
         <h2 className="font-display text-xl text-noir border-b border-noir/10 pb-2">
           📦 Dimensões e Peso (para frete)
         </h2>
-        <p className="text-sm text-cool-gray">
+        <p className="text-sm text-neutral-500">
           Informe o peso e dimensões da embalagem deste produto.
           Deixe <strong>0</strong> para usar os valores padrão da categoria.
         </p>
@@ -270,7 +270,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
         <h2 className="font-display text-xl text-noir border-b border-noir/10 pb-2">
           Galeria (opcional)
         </h2>
-        <p className="text-sm text-cool-gray">
+        <p className="text-sm text-neutral-500">
           Imagens secundárias que aparecem na página individual do produto.
         </p>
 
@@ -303,7 +303,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
         <h2 className="font-display text-xl text-noir border-b border-noir/10 pb-2">
           Variantes (opcional)
         </h2>
-        <p className="text-sm text-cool-gray">
+        <p className="text-sm text-neutral-500">
           Adicione variações como tamanho, cor ou modelo. Cada variante pode ter
           seu próprio preço e estoque.
         </p>

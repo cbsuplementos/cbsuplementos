@@ -56,10 +56,10 @@ export default async function DashboardPage() {
         <p className="text-xs uppercase tracking-[0.3em] text-gold-dark mb-2">
           Bem-vindo
         </p>
-        <h1 className="font-display text-4xl text-white">
-          Olá, <span className="text-gold">{session?.user?.name?.split(" ")[0]}</span>
+        <h1 className="font-display text-4xl text-noir">
+          Olá, <span className="text-gold-dark">{session?.user?.name?.split(" ")[0]}</span>
         </h1>
-        <p className="text-cool-gray mt-2">
+        <p className="text-neutral-500 mt-2">
           Aqui você gerencia tudo que aparece no site da CB Suplementos.
         </p>
       </header>
@@ -69,13 +69,13 @@ export default async function DashboardPage() {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="bg-white p-6 border border-gold/10"
+            className="bg-white p-6 border border-neutral-200"
           >
             <p className="text-xs uppercase tracking-widest text-gold-dark mb-3">
               {stat.label}
             </p>
             <p className="font-display text-4xl text-noir mb-1">{stat.value}</p>
-            <p className="text-xs text-cool-gray">{stat.hint}</p>
+            <p className="text-xs text-neutral-500">{stat.hint}</p>
           </div>
         ))}
       </section>
@@ -102,7 +102,7 @@ export default async function DashboardPage() {
         <h3 className="font-display text-lg text-noir mb-2">
           🚧 Funcionalidades em construção
         </h3>
-        <p className="text-sm text-cool-gray leading-relaxed">
+        <p className="text-sm text-neutral-500 leading-relaxed">
           O CRUD completo de produtos e categorias está sendo desenvolvido.
           Por enquanto, você pode visualizar as estatísticas e navegar pelo
           painel.
@@ -127,12 +127,12 @@ function ActionCard({
   return (
     <a
       href={href}
-      className="group bg-white p-6 border border-gold/10 hover:border-gold transition-colors duration-300"
+      className="group bg-white p-6 border border-neutral-200 hover:border-gold transition-colors duration-300"
     >
       <h3 className="font-display text-xl text-noir group-hover:text-gold-dark transition-colors duration-300 mb-2">
         {title} →
       </h3>
-      <p className="text-sm text-cool-gray">{description}</p>
+      <p className="text-sm text-neutral-500">{description}</p>
     </a>
   );
 }

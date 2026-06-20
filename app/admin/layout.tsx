@@ -31,7 +31,7 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-graphite flex">
+    <div className="min-h-screen bg-neutral-50 flex">
       <AdminSidebar user={session.user} />
 
       {/* Área de conteúdo principal */}

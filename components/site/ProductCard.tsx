@@ -4,7 +4,7 @@ import { formatPrice } from "@/lib/utils";
 
 // Mapa de badges com label e cor
 const BADGE_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  MAIS_VENDIDO: { label: "Mais Vendido", bg: "bg-amber-500", text: "text-white" },
+  MAIS_VENDIDO: { label: "Mais Vendido", bg: "bg-gold", text: "text-noir" },
   NOVIDADE: { label: "Novidade", bg: "bg-emerald-500", text: "text-white" },
   PROMOCAO: { label: "Promoção", bg: "bg-red-500", text: "text-white" },
   EXCLUSIVO: { label: "Exclusivo", bg: "bg-purple-600", text: "text-white" },
@@ -58,13 +58,13 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
           )}
 
           {isOutOfStock && (
-            <span className="bg-neutral-900 text-white text-[9px] sm:text-[10px] uppercase tracking-wider font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
+            <span className="bg-noir border border-white/20 text-white text-[9px] sm:text-[10px] uppercase tracking-wider font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
               Esgotado
             </span>
           )}
 
           {isLowStock && (
-            <span className="bg-amber-100 text-amber-800 text-[9px] sm:text-[10px] uppercase tracking-wider font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded shadow-sm">
+            <span className="bg-gold/20 text-gold-light border border-gold/40 text-[9px] sm:text-[10px] uppercase tracking-wider font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded shadow-sm">
               ⚡ Últimas {product.stock}
             </span>
           )}
@@ -73,13 +73,13 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
 
       {/* Info */}
       <div className="space-y-0.5 sm:space-y-1">
-        <p className="text-[9px] sm:text-[10px] uppercase tracking-widest text-gold-dark">
+        <p className="text-[9px] sm:text-[10px] uppercase tracking-widest text-gold">
           {product.category.name}
         </p>
-        <h3 className="font-display text-sm sm:text-base lg:text-lg text-noir group-hover:text-gold-dark transition-colors duration-300 leading-tight">
+        <h3 className="font-display text-sm sm:text-base lg:text-lg text-white group-hover:text-gold transition-colors duration-300 leading-tight">
           {product.name}
         </h3>
-        <p className="text-xs sm:text-sm font-medium text-noir/80">
+        <p className="text-xs sm:text-sm font-medium text-gold">
           {formatPrice(product.price)}
         </p>
       </div>

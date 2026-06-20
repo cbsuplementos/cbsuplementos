@@ -169,7 +169,7 @@ export default function ImageUpload({
       </div>
 
       {hint && !error && (
-        <p className="mt-1 text-xs text-cool-gray">{hint}</p>
+        <p className="mt-1 text-xs text-neutral-500">{hint}</p>
       )}
       {error && (
         <p className="mt-1 text-xs text-red-600">{error}</p>

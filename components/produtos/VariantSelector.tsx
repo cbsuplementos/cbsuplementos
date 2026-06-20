@@ -74,7 +74,7 @@ export default function VariantSelector({
   return (
     <div className="space-y-4">
       {/* Preço atualizado */}
-      <p className="text-2xl sm:text-3xl font-bold text-neutral-900">
+      <p className="text-2xl sm:text-3xl font-bold text-white">
         {formattedPrice}
       </p>
 
@@ -82,7 +82,7 @@ export default function VariantSelector({
         // Renderiza agrupado por tipo de atributo
         Array.from(attributeGroups.entries()).map(([attrName, values]) => (
           <div key={attrName}>
-            <span className="text-sm font-medium text-neutral-600 uppercase tracking-wider">
+            <span className="text-sm font-medium text-cool-gray uppercase tracking-wider">
               {attrName}
             </span>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -99,10 +99,10 @@ export default function VariantSelector({
                     className={`
                       px-4 py-2 rounded-md text-sm font-medium border transition-all duration-200
                       ${isSelected
-                        ? "bg-neutral-900 text-white border-neutral-900"
+                        ? "bg-gold text-noir border-gold"
                         : isAvailable
-                          ? "bg-white text-neutral-900 border-neutral-300 hover:border-amber-500 hover:text-amber-700"
-                          : "bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed line-through"
+                          ? "bg-charcoal text-white border-white/20 hover:border-gold hover:text-gold"
+                          : "bg-noir text-white/30 border-white/10 cursor-not-allowed line-through"
                       }
                     `}
                     title={!isAvailable ? "Indisponível" : `Selecionar ${item.value}`}
@@ -117,7 +117,7 @@ export default function VariantSelector({
       ) : (
         // Fallback: mostra pelo nome da variant
         <div>
-          <span className="text-sm font-medium text-neutral-600 uppercase tracking-wider">
+          <span className="text-sm font-medium text-cool-gray uppercase tracking-wider">
             Opções
           </span>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -133,10 +133,10 @@ export default function VariantSelector({
                   className={`
                     px-4 py-2 rounded-md text-sm font-medium border transition-all duration-200
                     ${isSelected
-                      ? "bg-neutral-900 text-white border-neutral-900"
+                      ? "bg-gold text-noir border-gold"
                       : isAvailable
-                        ? "bg-white text-neutral-900 border-neutral-300 hover:border-amber-500 hover:text-amber-700"
-                        : "bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed line-through"
+                        ? "bg-charcoal text-white border-white/20 hover:border-gold hover:text-gold"
+                        : "bg-noir text-white/30 border-white/10 cursor-not-allowed line-through"
                     }
                   `}
                   title={!isAvailable ? "Indisponível" : `Selecionar ${variant.name}`}
@@ -151,7 +151,7 @@ export default function VariantSelector({
 
       {/* Aviso de estoque baixo */}
       {selectedVariant && selectedVariant.stock > 0 && selectedVariant.stock <= 3 && (
-        <p className="text-sm text-amber-600 font-medium">
+        <p className="text-sm text-gold font-medium">
           ⚡ Apenas {selectedVariant.stock} em estoque
         </p>
       )}

@@ -39,7 +39,7 @@ export default async function CategoriesPage() {
       {categories.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="bg-white border border-gold/10 overflow-hidden">
+        <div className="bg-white border border-neutral-200 overflow-hidden">
           <table className="w-full">
             <thead className="bg-noir text-white">
               <tr>
@@ -62,7 +62,7 @@ export default async function CategoriesPage() {
             </thead>
             <tbody className="divide-y divide-noir/5">
               {categories.map((category) => (
-                <tr key={category.id} className="hover:bg-graphite/50">
+                <tr key={category.id} className="hover:bg-neutral-50">
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
                       <div className="relative w-12 h-12 bg-noir/5 flex-shrink-0">
@@ -86,7 +86,7 @@ export default async function CategoriesPage() {
                         <p className="font-display text-lg text-noir truncate">
                           {category.name}
                         </p>
-                        <p className="text-xs text-cool-gray truncate">
+                        <p className="text-xs text-neutral-500 truncate">
                           /{category.slug}
                         </p>
                       </div>
@@ -131,11 +131,11 @@ export default async function CategoriesPage() {
 
 function EmptyState() {
   return (
-    <div className="bg-white border border-gold/10 p-12 text-center">
+    <div className="bg-white border border-neutral-200 p-12 text-center">
       <p className="font-display text-2xl text-noir mb-2">
         Nenhuma categoria cadastrada
       </p>
-      <p className="text-cool-gray mb-6">
+      <p className="text-neutral-500 mb-6">
         Comece criando categorias para organizar os produtos da loja.
       </p>
       <Link href="/admin/categorias/nova">

@@ -137,7 +137,7 @@ export default function HeroSlideForm({ slide }: HeroSlideFormProps) {
       {/* Agendamento */}
       <section className="space-y-6">
         <h2 className="font-display text-xl text-noir border-b border-noir/10 pb-2">Agendamento (opcional)</h2>
-        <p className="text-sm text-cool-gray -mt-4">
+        <p className="text-sm text-neutral-500 -mt-4">
           Deixe em branco para exibir sempre. Preencha para promoções com data de início e fim.
         </p>
         <div className="grid sm:grid-cols-2 gap-6">

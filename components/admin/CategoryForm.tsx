@@ -99,7 +99,7 @@ export default function CategoryForm({ category }: CategoryFormProps) {
         <h2 className="font-display text-xl text-noir border-b border-noir/10 pb-2">
           📦 Embalagem Padrão
         </h2>
-        <p className="text-sm text-cool-gray">
+        <p className="text-sm text-neutral-500">
           Dimensões e peso padrão para produtos desta categoria. Se um produto não tiver dimensões próprias, estas serão usadas no cálculo do frete.
         </p>
 

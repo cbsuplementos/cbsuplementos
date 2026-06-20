@@ -90,23 +90,23 @@ export default function CustomerRegisterPage() {
   }
 
   return (
-    <section className="min-h-screen bg-neutral-50 py-8 sm:py-12 px-4">
+    <section className="min-h-screen bg-noir py-8 sm:py-12 px-4">
       <div className="w-full max-w-lg mx-auto">
         {/* Header */}
         <div className="flex flex-col items-center mb-8">
           <Link href="/" aria-label="CB Suplementos">
             <Logo variant="compact" className="h-12 w-auto" />
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-bold font-display text-neutral-900 mt-6">
+          <h1 className="text-2xl sm:text-3xl font-bold font-display text-white mt-6">
             Cadastro
           </h1>
-          <p className="mt-2 text-neutral-500 text-sm text-center">
+          <p className="mt-2 text-cool-gray text-sm text-center">
             Acesse os seus pedidos, facilite as suas compras e tenha uma experiência personalizada.
           </p>
         </div>
 
         {/* Formulário */}
-        <div className="bg-white p-5 sm:p-8 rounded-2xl shadow-sm border border-neutral-200">
+        <div className="bg-charcoal p-5 sm:p-8 rounded-2xl shadow-sm border border-gold/15">
           {error && (
             <div className="mb-5 p-3 bg-red-50 text-red-800 text-sm rounded-lg border border-red-200">
               {error}
@@ -116,7 +116,7 @@ export default function CustomerRegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* CPF */}
             <div>
-              <label htmlFor="cpf" className="block text-sm font-medium text-neutral-700 mb-1">
+              <label htmlFor="cpf" className="block text-sm font-medium text-white/80 mb-1">
                 CPF
               </label>
               <div className="relative">
@@ -129,12 +129,12 @@ export default function CustomerRegisterPage() {
                   placeholder="000.000.000-00"
                   onChange={(e) => setCpf(formatCPF(e.target.value))}
                   onBlur={() => setCpfTouched(true)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors pr-10 ${
+                  className={`w-full px-4 py-3 bg-noir text-white placeholder-white/40 border rounded-lg focus:outline-none transition-colors pr-10 ${
                     cpfTouched && cpfComplete
                       ? cpfValid
                         ? "border-green-400 focus:ring-green-400"
                         : "border-red-400 focus:ring-red-400"
-                      : "border-neutral-300 focus:ring-amber-500"
+                      : "border-white/15 focus:border-gold"
                   }`}
                 />
                 {/* Ícone de validação */}
@@ -159,7 +159,7 @@ export default function CustomerRegisterPage() {
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-white/80 mb-1">
                 E-mail
               </label>
               <input
@@ -169,13 +169,13 @@ export default function CustomerRegisterPage() {
                 value={email}
                 placeholder="seu@email.com"
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-3 bg-noir border border-white/15 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-gold"
               />
             </div>
 
             {/* Nome completo */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-neutral-700 mb-1">
+              <label htmlFor="name" className="block text-sm font-medium text-white/80 mb-1">
                 Nome Completo
               </label>
               <input
@@ -185,13 +185,13 @@ export default function CustomerRegisterPage() {
                 value={name}
                 placeholder="Seu nome completo"
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-3 bg-noir border border-white/15 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-gold"
               />
             </div>
 
             {/* Telefone */}
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-neutral-700 mb-1">
+              <label htmlFor="phone" className="block text-sm font-medium text-white/80 mb-1">
                 Telefone
               </label>
               <input
@@ -200,14 +200,14 @@ export default function CustomerRegisterPage() {
                 value={phone}
                 placeholder="(91) 99999-9999"
                 onChange={(e) => setPhone(formatPhone(e.target.value))}
-                className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-4 py-3 bg-noir border border-white/15 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-gold"
               />
             </div>
 
             {/* Data de nascimento + Gênero lado a lado */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="birthDate" className="block text-sm font-medium text-neutral-700 mb-1">
+                <label htmlFor="birthDate" className="block text-sm font-medium text-white/80 mb-1">
                   Data de Nascimento
                 </label>
                 <input
@@ -217,19 +217,19 @@ export default function CustomerRegisterPage() {
                   value={birthDate}
                   placeholder="DD/MM/AAAA"
                   onChange={(e) => setBirthDate(formatDate(e.target.value))}
-                  className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-4 py-3 bg-noir border border-white/15 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-gold"
                 />
               </div>
 
               <div>
-                <label htmlFor="gender" className="block text-sm font-medium text-neutral-700 mb-1">
+                <label htmlFor="gender" className="block text-sm font-medium text-white/80 mb-1">
                   Gênero
                 </label>
                 <select
                   id="gender"
                   value={gender}
                   onChange={(e) => setGender(e.target.value)}
-                  className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white appearance-none"
+                  className="w-full px-4 py-3 bg-noir border border-white/15 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-gold bg-charcoal appearance-none"
                 >
                   <option value="">Selecione</option>
                   <option value="feminino">Feminino</option>
@@ -242,7 +242,7 @@ export default function CustomerRegisterPage() {
 
             {/* Senha */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-neutral-700 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-white/80 mb-1">
                 Senha
               </label>
               <div className="relative">
@@ -252,12 +252,12 @@ export default function CustomerRegisterPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 pr-12"
+                  className="w-full px-4 py-3 bg-noir border border-white/15 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-gold pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-cool-gray p-1"
                   aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                 >
                   {showPassword ? (
@@ -276,7 +276,7 @@ export default function CustomerRegisterPage() {
               {/* Requisitos de senha */}
               {password.length > 0 && (
                 <div className="mt-2 space-y-1">
-                  <p className="text-xs text-neutral-500 font-medium mb-1">Sua senha deve conter:</p>
+                  <p className="text-xs text-cool-gray font-medium mb-1">Sua senha deve conter:</p>
                   <PwdCheck ok={pwdChecks.length} label="No mínimo 8 caracteres" />
                   <PwdCheck ok={pwdChecks.upper} label="Letras maiúsculas" />
                   <PwdCheck ok={pwdChecks.lower} label="Letras minúsculas" />
@@ -288,7 +288,7 @@ export default function CustomerRegisterPage() {
 
             {/* Confirmar senha */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-neutral-700 mb-1">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-white/80 mb-1">
                 Confirmar Senha
               </label>
               <div className="relative">
@@ -298,18 +298,18 @@ export default function CustomerRegisterPage() {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 pr-12 ${
+                  className={`w-full px-4 py-3 bg-noir text-white placeholder-white/40 border rounded-lg focus:outline-none pr-12 ${
                     confirmPassword.length > 0
                       ? passwordsMatch
-                        ? "border-green-400 focus:ring-green-400"
-                        : "border-red-400 focus:ring-red-400"
-                      : "border-neutral-300 focus:ring-amber-500"
+                        ? "border-green-400"
+                        : "border-red-400"
+                      : "border-white/15 focus:border-gold"
                   }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-cool-gray p-1"
                   aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
                 >
                   {showConfirmPassword ? (
@@ -336,11 +336,11 @@ export default function CustomerRegisterPage() {
                   type="checkbox"
                   checked={acceptTerms}
                   onChange={(e) => setAcceptTerms(e.target.checked)}
-                  className="mt-0.5 w-5 h-5 rounded border-neutral-300 text-amber-600 focus:ring-amber-500"
+                  className="mt-0.5 w-5 h-5 rounded border-white/15 text-gold focus:border-gold"
                 />
-                <span className="text-sm text-neutral-600 leading-snug">
+                <span className="text-sm text-cool-gray leading-snug">
                   Ao finalizar o cadastro eu concordo com a{" "}
-                  <Link href="/privacidade" className="text-amber-600 hover:text-amber-700 underline">
+                  <Link href="/privacidade" className="text-gold hover:text-gold-light underline">
                     Política de Privacidade
                   </Link>{" "}
                   e os Termos e Condições.
@@ -352,15 +352,15 @@ export default function CustomerRegisterPage() {
             <button
               type="submit"
               disabled={loading || !isFormValid}
-              className="w-full py-3.5 bg-neutral-900 text-white font-semibold rounded-lg hover:bg-neutral-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed mt-2"
+              className="w-full py-3.5 bg-gold text-noir font-bold uppercase tracking-wider hover:bg-gold-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed mt-2"
             >
               {loading ? "Criando conta..." : "Criar conta"}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-neutral-500">
+          <p className="mt-6 text-center text-sm text-cool-gray">
             Já tem conta?{" "}
-            <Link href="/conta/login" className="text-amber-600 hover:text-amber-700 font-medium">
+            <Link href="/conta/login" className="text-gold hover:text-gold-light font-medium">
               Entrar
             </Link>
           </p>
@@ -368,13 +368,13 @@ export default function CustomerRegisterPage() {
 
         {/* Redes sociais */}
         <div className="mt-8 text-center">
-          <p className="text-sm text-neutral-500 mb-3">A gente se encontra na</p>
+          <p className="text-sm text-cool-gray mb-3">A gente se encontra na</p>
           <div className="flex items-center justify-center gap-4">
             <a
               href="https://www.instagram.com/cb_suplementos_oficial"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+              className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-cool-gray hover:bg-gold/15 hover:text-gold transition-colors"
               aria-label="Instagram"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -385,7 +385,7 @@ export default function CustomerRegisterPage() {
               href="https://wa.me/559199266197"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:bg-green-50 hover:text-green-600 transition-colors"
+              className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-cool-gray hover:bg-green-500/15 hover:text-green-600 transition-colors"
               aria-label="WhatsApp"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -403,8 +403,8 @@ export default function CustomerRegisterPage() {
 function PwdCheck({ ok, label }: { ok: boolean; label: string }) {
   return (
     <div className="flex items-center gap-2">
-      <div className={`w-1.5 h-1.5 rounded-full ${ok ? "bg-green-500" : "bg-neutral-300"}`} />
-      <span className={`text-xs ${ok ? "text-green-600" : "text-neutral-400"}`}>{label}</span>
+      <div className={`w-1.5 h-1.5 rounded-full ${ok ? "bg-green-500" : "bg-white/20"}`} />
+      <span className={`text-xs ${ok ? "text-green-600" : "text-white/50"}`}>{label}</span>
     </div>
   );
 }

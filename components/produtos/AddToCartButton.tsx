@@ -66,7 +66,7 @@ export default function AddToCartButton({
         <button
           disabled
           className="flex items-center justify-center gap-3 w-full px-6 py-4
-                     bg-neutral-200 text-neutral-500 font-semibold text-base sm:text-lg
+                     bg-white/10 text-white/40 font-semibold text-base sm:text-lg
                      rounded-xl cursor-not-allowed"
         >
           😔 Produto esgotado
@@ -90,7 +90,7 @@ export default function AddToCartButton({
                      ? "bg-green-600 text-white"
                      : error
                        ? "bg-red-600 text-white"
-                       : "bg-neutral-900 hover:bg-neutral-800 text-white"
+                       : "bg-gold hover:bg-gold-light text-noir"
                    }`}
       >
         {loading ? (
@@ -114,7 +114,7 @@ export default function AddToCartButton({
         )}
       </button>
       {!hasVariants && stock !== null && stock !== undefined && stock > 0 && stock <= 3 && (
-        <p className="mt-2 text-xs text-center text-amber-600 font-medium">
+        <p className="mt-2 text-xs text-center text-gold font-medium">
           ⚡ Apenas {stock} em estoque
         </p>
       )}

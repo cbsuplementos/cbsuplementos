@@ -3,7 +3,7 @@ import Image from "next/image";
 
 // Mapa de badges com label e cor
 const BADGE_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  MAIS_VENDIDO: { label: "Mais Vendido", bg: "bg-amber-500", text: "text-white" },
+  MAIS_VENDIDO: { label: "Mais Vendido", bg: "bg-gold", text: "text-noir" },
   NOVIDADE: { label: "Novidade", bg: "bg-emerald-500", text: "text-white" },
   PROMOCAO: { label: "Promoção", bg: "bg-red-500", text: "text-white" },
   EXCLUSIVO: { label: "Exclusivo", bg: "bg-purple-600", text: "text-white" },
@@ -39,10 +39,10 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <Link
       href={`/produtos/${product.slug}`}
-      className="group block bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500"
+      className="group block bg-charcoal border border-white/10 rounded-lg overflow-hidden hover:border-gold/50 hover:shadow-[0_0_25px_rgba(212,162,76,0.15)] transition-all duration-500"
     >
       {/* Imagem com aspect ratio fixo */}
-      <div className="relative aspect-[3/4] overflow-hidden bg-neutral-100">
+      <div className="relative aspect-[3/4] overflow-hidden bg-noir">
         <Image
           src={product.mainImage}
           alt={product.name}
@@ -62,14 +62,14 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           {/* Tag "Esgotado" */}
           {isOutOfStock && (
-            <span className="bg-neutral-900 text-white text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded">
+            <span className="bg-noir border border-white/20 text-white text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded">
               Esgotado
             </span>
           )}
 
           {/* Urgência de estoque baixo */}
           {isLowStock && (
-            <span className="bg-amber-100 text-amber-800 text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded shadow-sm">
+            <span className="bg-gold/20 text-gold-light border border-gold/40 text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded shadow-sm">
               ⚡ Últimas {product.stock} un.
             </span>
           )}
@@ -82,16 +82,16 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Informações do produto */}
       <div className="p-3 sm:p-4">
         {product.category && (
-          <span className="text-xs uppercase tracking-wider text-amber-600 font-medium">
+          <span className="text-xs uppercase tracking-wider text-gold font-medium">
             {product.category.name}
           </span>
         )}
 
-        <h3 className="mt-1 text-sm sm:text-base font-medium text-neutral-900 line-clamp-2 group-hover:text-amber-700 transition-colors">
+        <h3 className="mt-1 text-sm sm:text-base font-medium text-white line-clamp-2 group-hover:text-gold transition-colors">
           {product.name}
         </h3>
 
-        <p className="mt-2 text-base sm:text-lg font-semibold text-neutral-900">
+        <p className="mt-2 text-base sm:text-lg font-semibold text-gold">
           {formattedPrice}
         </p>
       </div>

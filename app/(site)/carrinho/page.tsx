@@ -58,17 +58,17 @@ export default function CarrinhoPage() {
 
   const fmt = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-neutral-400">Carregando...</p></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-white/50">Carregando...</p></div>;
 
   return (
-    <section className="min-h-screen bg-neutral-50">
+    <section className="min-h-screen bg-noir">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <h1 className="text-2xl sm:text-3xl font-bold font-display text-neutral-900 mb-8">Meu Carrinho</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold font-display text-white mb-8">Meu Carrinho</h1>
 
         {items.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-neutral-400 text-lg mb-4">Seu carrinho está vazio.</p>
-            <Link href="/produtos" className="inline-block px-6 py-3 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors">
+            <p className="text-white/50 text-lg mb-4">Seu carrinho está vazio.</p>
+            <Link href="/produtos" className="inline-block px-6 py-3 bg-gold text-noir font-bold uppercase tracking-wider rounded-lg hover:bg-gold-light transition-colors">
               Ver produtos
             </Link>
           </div>
@@ -78,42 +78,42 @@ export default function CarrinhoPage() {
               {items.map((item) => {
                 const price = item.variant ? Number(item.variant.price) : Number(item.product.price);
                 return (
-                  <div key={item.id} className="flex gap-4 bg-white p-4 rounded-xl border border-neutral-200">
-                    <div className="relative w-20 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-neutral-100">
+                  <div key={item.id} className="flex gap-4 bg-charcoal p-4 rounded-xl border border-gold/15">
+                    <div className="relative w-20 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-charcoal">
                       <Image src={item.product.mainImage} alt={item.product.name} fill sizes="80px" className="object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <Link href={`/produtos/${item.product.slug}`} className="text-sm font-medium text-neutral-900 hover:text-amber-600 line-clamp-2">
+                      <Link href={`/produtos/${item.product.slug}`} className="text-sm font-medium text-white hover:text-gold line-clamp-2">
                         {item.product.name}
                       </Link>
-                      {item.variant && <p className="text-xs text-neutral-500 mt-0.5">{item.variant.name}</p>}
-                      <p className="text-sm font-semibold text-neutral-900 mt-1">{fmt(price)}</p>
+                      {item.variant && <p className="text-xs text-cool-gray mt-0.5">{item.variant.name}</p>}
+                      <p className="text-sm font-semibold text-white mt-1">{fmt(price)}</p>
                       <div className="flex items-center gap-3 mt-2">
-                        <div className="flex items-center border border-neutral-200 rounded-lg">
+                        <div className="flex items-center border border-gold/15 rounded-lg">
                           <button onClick={() => item.quantity > 1 && updateQty(item.id, item.quantity - 1)}
-                            className="px-2.5 py-1 text-neutral-500 hover:text-neutral-900">−</button>
+                            className="px-2.5 py-1 text-cool-gray hover:text-white">−</button>
                           <span className="px-2 text-sm font-medium">{item.quantity}</span>
                           <button onClick={() => updateQty(item.id, item.quantity + 1)}
-                            className="px-2.5 py-1 text-neutral-500 hover:text-neutral-900">+</button>
+                            className="px-2.5 py-1 text-cool-gray hover:text-white">+</button>
                         </div>
                         <button onClick={() => removeItem(item.id)} className="text-xs text-red-500 hover:text-red-700">Remover</button>
                       </div>
                     </div>
-                    <p className="text-sm font-bold text-neutral-900 whitespace-nowrap">{fmt(price * item.quantity)}</p>
+                    <p className="text-sm font-bold text-white whitespace-nowrap">{fmt(price * item.quantity)}</p>
                   </div>
                 );
               })}
             </div>
 
-            <div className="bg-white p-6 rounded-xl border border-neutral-200 h-fit sticky top-24">
-              <h2 className="text-lg font-semibold text-neutral-900 mb-4">Resumo</h2>
+            <div className="bg-charcoal p-6 rounded-xl border border-gold/15 h-fit sticky top-24">
+              <h2 className="text-lg font-semibold text-white mb-4">Resumo</h2>
               <div className="flex justify-between mb-2 text-sm">
-                <span className="text-neutral-600">Subtotal ({items.length} {items.length === 1 ? "item" : "itens"})</span>
+                <span className="text-cool-gray">Subtotal ({items.length} {items.length === 1 ? "item" : "itens"})</span>
                 <span className="font-medium">{fmt(subtotal)}</span>
               </div>
               <div className="flex justify-between mb-4 text-sm">
-                <span className="text-neutral-600">Frete</span>
-                <span className="text-neutral-400">Calculado no checkout</span>
+                <span className="text-cool-gray">Frete</span>
+                <span className="text-white/50">Calculado no checkout</span>
               </div>
               <hr className="mb-4" />
               <div className="flex justify-between mb-6">

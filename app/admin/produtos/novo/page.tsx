@@ -20,11 +20,11 @@ export default async function NewProductPage() {
           title="Novo Produto"
           description="Adicione um novo produto à vitrine."
         />
-        <div className="bg-white border border-gold/10 p-12 text-center">
+        <div className="bg-white border border-neutral-200 p-12 text-center">
           <p className="font-display text-xl text-noir mb-2">
             Crie uma categoria primeiro
           </p>
-          <p className="text-cool-gray mb-6">
+          <p className="text-neutral-500 mb-6">
             Antes de cadastrar produtos, você precisa ter pelo menos uma categoria ativa.
           </p>
           <Link href="/admin/categorias/nova">

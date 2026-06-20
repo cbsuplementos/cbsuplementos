@@ -44,7 +44,7 @@ export default function ImageGallery({
   return (
     <div className="space-y-3">
       {/* Imagem principal */}
-      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-neutral-100">
+      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-charcoal">
         <Image
           src={currentImage.url}
           alt={currentImage.alt || productName}
@@ -67,8 +67,8 @@ export default function ImageGallery({
                 relative flex-shrink-0 w-16 h-20 sm:w-20 sm:h-24 rounded-md overflow-hidden
                 transition-all duration-200
                 ${selectedIndex === index
-                  ? "ring-2 ring-amber-500 ring-offset-2"
-                  : "ring-1 ring-neutral-200 hover:ring-amber-300 opacity-70 hover:opacity-100"
+                  ? "ring-2 ring-gold ring-offset-2 ring-offset-noir"
+                  : "ring-1 ring-white/20 hover:ring-gold/60 opacity-70 hover:opacity-100"
                 }
               `}
               aria-label={`Ver imagem ${index + 1}`}

@@ -112,18 +112,18 @@ export default async function ProductDetailPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
 
-      <section className="min-h-screen bg-white">
+      <section className="min-h-screen bg-noir">
         {/* Breadcrumb */}
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <ol className="flex items-center gap-2 text-sm text-neutral-500">
+          <ol className="flex items-center gap-2 text-sm text-cool-gray">
             <li>
-              <Link href="/" className="hover:text-amber-600 transition-colors">
+              <Link href="/" className="hover:text-gold transition-colors">
                 Início
               </Link>
             </li>
             <li>/</li>
             <li>
-              <Link href="/produtos" className="hover:text-amber-600 transition-colors">
+              <Link href="/produtos" className="hover:text-gold transition-colors">
                 Produtos
               </Link>
             </li>
@@ -131,13 +131,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
             <li>
               <Link
                 href={`/produtos?categoria=${product.category.slug}`}
-                className="hover:text-amber-600 transition-colors"
+                className="hover:text-gold transition-colors"
               >
                 {product.category.name}
               </Link>
             </li>
             <li>/</li>
-            <li className="text-neutral-900 font-medium truncate max-w-[200px]">
+            <li className="text-white font-medium truncate max-w-[200px]">
               {product.name}
             </li>
           </ol>
@@ -162,13 +162,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
               <div className="flex items-center gap-2 flex-wrap">
                 <Link
                   href={`/produtos?categoria=${product.category.slug}`}
-                  className="text-sm uppercase tracking-wider text-amber-600 font-medium hover:text-amber-700 transition-colors w-fit"
+                  className="text-sm uppercase tracking-wider text-gold font-medium hover:text-gold-light transition-colors w-fit"
                 >
                   {product.category.name}
                 </Link>
                 {product.badge && product.badge !== "NONE" && (() => {
                   const badges: Record<string, { label: string; bg: string; text: string }> = {
-                    MAIS_VENDIDO: { label: "Mais Vendido", bg: "bg-amber-500", text: "text-white" },
+                    MAIS_VENDIDO: { label: "Mais Vendido", bg: "bg-gold", text: "text-noir" },
                     NOVIDADE: { label: "Novidade", bg: "bg-emerald-500", text: "text-white" },
                     PROMOCAO: { label: "Promoção", bg: "bg-red-500", text: "text-white" },
                     EXCLUSIVO: { label: "Exclusivo", bg: "bg-purple-600", text: "text-white" },
@@ -183,7 +183,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </div>
 
               {/* Nome do produto */}
-              <h1 className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 font-display">
+              <h1 className="mt-2 text-2xl sm:text-3xl lg:text-4xl font-bold text-white font-display">
                 {product.name}
               </h1>
 
@@ -202,7 +202,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
                     basePrice={product.price.toString()}
                   />
                 ) : (
-                  <p className="text-2xl sm:text-3xl font-bold text-neutral-900">
+                  <p className="text-2xl sm:text-3xl font-bold text-white">
                     {formattedPrice}
                   </p>
                 )}
@@ -210,12 +210,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
               {/* Descrição */}
               <div className="mt-8">
-                <h2 className="text-sm font-medium text-neutral-600 uppercase tracking-wider mb-3">
+                <h2 className="text-sm font-medium text-cool-gray uppercase tracking-wider mb-3">
                   Descrição
                 </h2>
                 <div className="prose prose-neutral prose-sm sm:prose-base max-w-none">
                   {product.description.split("\n").map((paragraph, i) => (
-                    <p key={i} className="text-neutral-700 leading-relaxed">
+                    <p key={i} className="text-white/80 leading-relaxed">
                       {paragraph}
                     </p>
                   ))}
@@ -236,15 +236,15 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </div>
 
               {/* Info extra */}
-              <div className="mt-8 pt-6 border-t border-neutral-200 space-y-3">
-                <div className="flex items-center gap-3 text-sm text-neutral-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500">
+              <div className="mt-8 pt-6 border-t border-gold/15 space-y-3">
+                <div className="flex items-center gap-3 text-sm text-cool-gray">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gold">
                     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
                   </svg>
                   Produto 100% original com nota fiscal
                 </div>
-                <div className="flex items-center gap-3 text-sm text-neutral-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500">
+                <div className="flex items-center gap-3 text-sm text-cool-gray">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gold">
                     <rect width="20" height="16" x="2" y="4" rx="2" />
                     <path d="M6 8h.001M10 8h.001" />
                     <path d="M2 12h20" />

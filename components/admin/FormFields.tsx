@@ -36,7 +36,7 @@ export function Input({ label, error, hint, id, ...props }: InputProps) {
         "
       />
       {hint && !error && (
-        <p className="mt-1 text-xs text-cool-gray">{hint}</p>
+        <p className="mt-1 text-xs text-neutral-500">{hint}</p>
       )}
       {error && (
         <p className="mt-1 text-xs text-red-600">{error}</p>
@@ -76,7 +76,7 @@ export function Textarea({ label, error, hint, id, ...props }: TextareaProps) {
         "
       />
       {hint && !error && (
-        <p className="mt-1 text-xs text-cool-gray">{hint}</p>
+        <p className="mt-1 text-xs text-neutral-500">{hint}</p>
       )}
       {error && (
         <p className="mt-1 text-xs text-red-600">{error}</p>
@@ -151,7 +151,7 @@ export function Checkbox({ label, description, id, ...props }: CheckboxProps) {
           {label}
         </span>
         {description && (
-          <p className="text-xs text-cool-gray mt-0.5">{description}</p>
+          <p className="text-xs text-neutral-500 mt-0.5">{description}</p>
         )}
       </div>
     </label>
@@ -205,7 +205,7 @@ export function PageHeader({ title, description, action }: PageHeaderProps) {
       <div>
         <h1 className="font-display text-3xl sm:text-4xl text-noir">{title}</h1>
         {description && (
-          <p className="text-cool-gray mt-2">{description}</p>
+          <p className="text-neutral-500 mt-2">{description}</p>
         )}
       </div>
       {action && <div>{action}</div>}

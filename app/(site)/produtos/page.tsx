@@ -74,7 +74,7 @@ export default async function ProdutosPage({ searchParams }: PageProps) {
     : null;
 
   return (
-    <section className="min-h-screen bg-neutral-50">
+    <section className="min-h-screen bg-noir">
       {/* Header da página */}
       <div className="bg-neutral-900 text-white py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -126,7 +126,7 @@ export default async function ProdutosPage({ searchParams }: PageProps) {
             </p>
             <a
               href="/produtos"
-              className="mt-4 inline-block text-amber-600 hover:text-amber-700 font-medium underline"
+              className="mt-4 inline-block text-gold hover:text-gold-light font-medium underline"
             >
               Ver todos os produtos
             </a>

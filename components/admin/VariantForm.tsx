@@ -75,14 +75,14 @@ export default function VariantForm({ variants, onChange }: VariantFormProps) {
               <button
                 type="button"
                 onClick={() => toggleExpand(index)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-graphite/30 hover:bg-graphite/50 transition-colors"
+                className="w-full flex items-center justify-between px-4 py-3 bg-neutral-50 hover:bg-neutral-100 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-medium text-noir">
                     {variant.name || `Variante ${index + 1}`}
                   </span>
                   {variant.price && (
-                    <span className="text-xs text-cool-gray">
+                    <span className="text-xs text-neutral-500">
                       R$ {variant.price}
                     </span>
                   )}
@@ -93,7 +93,7 @@ export default function VariantForm({ variants, onChange }: VariantFormProps) {
                   )}
                 </div>
                 <svg
-                  className={`w-4 h-4 text-cool-gray transition-transform ${
+                  className={`w-4 h-4 text-neutral-500 transition-transform ${
                     expandedIndex === index ? "rotate-180" : ""
                   }`}
                   fill="none"

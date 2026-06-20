@@ -33,9 +33,9 @@ export default async function HeroPage() {
       />
 
       {slides.length === 0 ? (
-        <div className="bg-white border border-gold/10 p-12 text-center">
+        <div className="bg-white border border-neutral-200 p-12 text-center">
           <p className="font-display text-2xl text-noir mb-2">Nenhum slide cadastrado</p>
-          <p className="text-cool-gray mb-6">
+          <p className="text-neutral-500 mb-6">
             Crie slides para o banner principal do site. Enquanto não houver slides, um placeholder elegante é exibido.
           </p>
           <Link href="/admin/hero/novo">
@@ -47,7 +47,7 @@ export default async function HeroPage() {
           {slides.map((slide) => {
             const status = getSlideStatus(slide);
             return (
-              <div key={slide.id} className="bg-white border border-gold/10 p-4 sm:p-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <div key={slide.id} className="bg-white border border-neutral-200 p-4 sm:p-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                 {/* Thumbnail */}
                 <div className="relative w-full sm:w-32 h-40 sm:h-20 flex-shrink-0 bg-noir/5 overflow-hidden">
                   <Image
@@ -70,7 +70,7 @@ export default async function HeroPage() {
                     </span>
                   </div>
 
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-cool-gray">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
                     <span>Prioridade: {slide.priority}</span>
                     <span>Duração: {slide.duration}s</span>
                     {slide.startsAt && (
@@ -92,7 +92,7 @@ export default async function HeroPage() {
       )}
 
       {slides.length > 0 && (
-        <p className="mt-4 text-xs text-cool-gray">
+        <p className="mt-4 text-xs text-neutral-500">
           ★ Slides ordenados por prioridade (menor número = aparece primeiro). Slides com agendamento só ficam visíveis no período definido.
         </p>
       )}
