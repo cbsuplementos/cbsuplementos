@@ -3,7 +3,7 @@ import { getCustomerSession } from "@/lib/customer-auth";
 import { prisma } from "@/lib/db";
 
 /**
- * GET /api/orders/check?numero=VQ-XXXXX
+ * GET /api/orders/check?numero=CB-XXXXX
  *
  * Retorna status do pedido + dados do Pix (qr_code, ticket_url)
  * Usado pelo polling da página de sucesso.

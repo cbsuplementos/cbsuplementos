@@ -72,7 +72,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
           body: JSON.stringify({ productId, variantId }),
         });
         if (res.ok) {
-          setCartCount((c) => c + 1);
+          // Sincroniza a contagem real do servidor (em vez de assumir +1),
+          // garantindo que o badge do header reflita o carrinho de fato.
+          await refreshCart();
           return true;
         }
         return false;
@@ -80,7 +82,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return false;
       }
     },
-    [customer]
+    [customer, refreshCart]
   );
 
   const logout = useCallback(async () => {

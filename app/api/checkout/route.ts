@@ -114,7 +114,7 @@ export async function POST(request: Request) {
     const count = await prisma.order.count({
       where: { createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
     });
-    const orderNumber = `VQ-${today}-${String(count + 1).padStart(3, "0")}`;
+    const orderNumber = `CB-${today}-${String(count + 1).padStart(3, "0")}`;
 
     // Cria pedido no banco
     const order = await prisma.order.create({

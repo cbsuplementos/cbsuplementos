@@ -20,7 +20,20 @@ export default function Header() {
   const { customer, cartCount } = useCart();
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    // Histerese para evitar "flicker" perto do limiar:
+    // só encolhe ao passar de 80px, e só volta a crescer abaixo de 20px.
+    // Isso cria uma zona morta (20–80px) onde o estado não muda, evitando
+    // o loop em que mudar a altura do header reposiciona o scroll e
+    // dispara a troca de estado repetidamente.
+    const handleScroll = () => {
+      const y = window.scrollY;
+      setIsScrolled((prev) => {
+        if (!prev && y > 80) return true;
+        if (prev && y < 20) return false;
+        return prev;
+      });
+    };
+    handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);

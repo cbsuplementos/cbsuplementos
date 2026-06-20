@@ -13,7 +13,6 @@ function SuccessContent() {
   const [paid, setPaid] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pixCode, setPixCode] = useState("");
-  const [ticketUrl, setTicketUrl] = useState("");
 
   const fetchOrderData = useCallback(async () => {
     if (!pedido) return;
@@ -28,7 +27,6 @@ function SuccessContent() {
 
       if (data.pixData) {
         if (data.pixData.qrCode) setPixCode(data.pixData.qrCode);
-        if (data.pixData.ticketUrl) setTicketUrl(data.pixData.ticketUrl);
       }
 
       setLoading(false);
@@ -108,14 +106,14 @@ function SuccessContent() {
             <p className="text-sm text-cool-gray">Número: <strong>{pedido}</strong></p>
           </div>
 
-          {/* Alerta */}
-          <div className="bg-gold/10 border-2 border-gold/30 rounded-xl p-4 mb-6">
+          {/* Aviso amigável */}
+          <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mb-6">
             <p className="text-sm text-gold-light font-medium mb-1">
-              ⚠️ Seu pedido ainda não foi pago
+              Falta pouco! Conclua o pagamento via Pix
             </p>
-            <p className="text-xs text-gold-light">
-              Conclua o pagamento via Pix abaixo. Sem o pagamento confirmado,
-              seu pedido será cancelado em 30 minutos.
+            <p className="text-xs text-cool-gray">
+              É só escanear o QR Code ou copiar o código abaixo. Caso o pagamento
+              não seja efetuado, o pedido será cancelado automaticamente em 30 minutos.
             </p>
           </div>
 
@@ -160,27 +158,13 @@ function SuccessContent() {
             </div>
           )}
 
-          {/* Link alternativo do MP */}
-          {ticketUrl && (
-            <div className="mb-4 text-center">
-              <a
-                href={ticketUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-gold underline hover:text-gold-light"
-              >
-                Ou pague pelo site do Mercado Pago →
-              </a>
-            </div>
-          )}
-
           {/* Status polling */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-            <div className="inline-flex items-center gap-2 text-sm text-blue-800">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 text-center">
+            <div className="inline-flex items-center gap-2 text-sm text-blue-300">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
               Aguardando confirmação automática...
             </div>
-            <p className="text-xs text-blue-600 mt-1">
+            <p className="text-xs text-blue-400/80 mt-1">
               Esta página atualiza sozinha quando o pagamento for confirmado.
             </p>
           </div>
