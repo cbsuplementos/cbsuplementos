@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { calcularFrete, consultarCep, PackageItem } from "@/lib/correios";
+import { calcularFrete, consultarCep, OutsideDeliveryAreaError, PackageItem } from "@/lib/correios";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { cep, items } = body;
+    const { cep, items, subtotal } = body;
 
     if (!cep) {
       return NextResponse.json({ error: "CEP é obrigatório." }, { status: 400 });
@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     }
 
     // Montar array de pacotes — um por item do carrinho
+    // (mantido por compatibilidade; o cálculo atual via motoboy não usa dimensão/peso)
     const packages: PackageItem[] = [];
     if (items && Array.isArray(items) && items.length > 0) {
       for (const item of items) {
@@ -28,14 +29,15 @@ export async function POST(request: Request) {
         });
       }
     } else {
-      // Fallback: pacote genérico
       packages.push({ weight: 300, height: 10, width: 15, length: 20, quantity: 1 });
     }
 
-    // Busca endereço e frete em paralelo
-    const [addressResult, freightOptions] = await Promise.allSettled([
+    const subtotalNum = typeof subtotal === "number" ? subtotal : 0;
+
+    // Busca endereço (para preencher o formulário) em paralelo com o frete
+    const [addressResult, freightResult] = await Promise.allSettled([
       consultarCep(cleanCep),
-      calcularFrete(cleanCep, packages),
+      calcularFrete(cleanCep, packages, subtotalNum),
     ]);
 
     const address =
@@ -43,23 +45,28 @@ export async function POST(request: Request) {
         ? addressResult.value
         : { cep: cleanCep, street: "", neighborhood: "", city: "", state: "" };
 
-    const options =
-      freightOptions.status === "fulfilled"
-        ? freightOptions.value
-        : [
-            { service: "PAC", name: "PAC — Econômico (estimado)", price: 25.9, deadline: "8 a 12 dias úteis", deadlineDays: 10 },
-            { service: "SEDEX", name: "SEDEX — Expresso (estimado)", price: 45.9, deadline: "3 a 5 dias úteis", deadlineDays: 4 },
-          ];
+    // CEP fora da área de entrega — bloqueia com mensagem clara, sem opções de frete
+    if (freightResult.status === "rejected") {
+      const err = freightResult.reason;
+      if (err instanceof OutsideDeliveryAreaError) {
+        return NextResponse.json(
+          { error: err.message, outsideArea: true, address },
+          { status: 422 }
+        );
+      }
+      console.error("[SHIPPING_ERROR]", err);
+      return NextResponse.json(
+        { error: "Não foi possível calcular o frete para esse CEP. Tente novamente." },
+        { status: 502 }
+      );
+    }
 
-    return NextResponse.json({ address, options });
+    return NextResponse.json({ address, options: freightResult.value });
   } catch (error) {
     console.error("[SHIPPING_ERROR]", error);
-    return NextResponse.json({
-      address: { cep: "", street: "", neighborhood: "", city: "", state: "" },
-      options: [
-        { service: "PAC", name: "PAC — Econômico (estimado)", price: 25.9, deadline: "8 a 12 dias úteis", deadlineDays: 10 },
-        { service: "SEDEX", name: "SEDEX — Expresso (estimado)", price: 45.9, deadline: "3 a 5 dias úteis", deadlineDays: 4 },
-      ],
-    });
+    return NextResponse.json(
+      { error: "Erro ao consultar CEP. Tente novamente." },
+      { status: 500 }
+    );
   }
 }

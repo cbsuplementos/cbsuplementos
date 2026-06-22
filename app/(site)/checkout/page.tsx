@@ -37,6 +37,7 @@ export default function CheckoutPage() {
 
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [selectedShipping, setSelectedShipping] = useState<ShippingOption | null>(null);
+  const [outsideArea, setOutsideArea] = useState(false);
 
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card">("pix");
 
@@ -77,6 +78,7 @@ export default function CheckoutPage() {
 
     setCepLoading(true);
     setError("");
+    setOutsideArea(false);
     setShippingOptions([]);
     setSelectedShipping(null);
 
@@ -87,10 +89,15 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           cep: cleanCep,
           items: items.map(i => ({ weight: i.product.weight, width: i.product.width, height: i.product.height, length: i.product.length, quantity: i.quantity })),
+          subtotal,
         }),
       });
       const data = await res.json();
-      if (data.error) { setError(data.error); return; }
+      if (data.error) {
+        setError(data.error);
+        if (data.outsideArea) setOutsideArea(true);
+        return;
+      }
       if (data.address && useNewAddress) {
         setAddress(prev => ({
           ...prev,
@@ -101,9 +108,12 @@ export default function CheckoutPage() {
         }));
       }
       setShippingOptions(data.options || []);
+      if (data.options?.length === 1) {
+        setSelectedShipping(data.options[0]);
+      }
     } catch { setError("Erro ao consultar CEP"); }
     finally { setCepLoading(false); }
-  }, [items, useNewAddress]);
+  }, [items, useNewAddress, subtotal]);
 
   // Quando seleciona endereço salvo → calcular frete automaticamente
   useEffect(() => {
@@ -177,7 +187,7 @@ export default function CheckoutPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <h1 className="text-2xl sm:text-3xl font-bold font-display text-white mb-8">Checkout</h1>
 
-        {error && <div className="mb-6 p-4 bg-red-50 text-red-800 text-sm rounded-lg border border-red-200">{error}</div>}
+        {error && !outsideArea && <div className="mb-6 p-4 bg-red-50 text-red-800 text-sm rounded-lg border border-red-200">{error}</div>}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
@@ -237,6 +247,8 @@ export default function CheckoutPage() {
                         setAddress({ cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "" });
                         setShippingOptions([]);
                         setSelectedShipping(null);
+                        setOutsideArea(false);
+                        setError("");
                       }}
                       className="w-4 h-4 text-gold"
                     />
@@ -262,29 +274,35 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Opções de envio */}
-              {shippingOptions.length > 0 && (
+              {/* Área não atendida — bloqueia o restante do checkout */}
+              {outsideArea && (
+                <div className="p-4 rounded-lg border border-red-500/30 bg-red-500/10">
+                  <p className="text-sm font-medium text-red-300">{error}</p>
+                  <p className="text-xs text-red-300/70 mt-1">
+                    Tente um CEP de Belém (PA) ou Petrolina (PE) para continuar.
+                  </p>
+                </div>
+              )}
+
+              {/* Opção de envio — motoboy (única opção, área restrita) */}
+              {!outsideArea && shippingOptions.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-white/80 mb-2">Opções de envio:</p>
+                  <p className="text-sm font-medium text-white/80 mb-2">Entrega:</p>
                   {shippingOptions.map(opt => (
-                    <label key={opt.service} className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${selectedShipping?.service === opt.service ? "border-gold bg-gold/10" : "border-gold/15 hover:border-white/15"}`}>
-                      <div className="flex items-center gap-3">
-                        <input type="radio" name="shipping" checked={selectedShipping?.service === opt.service}
-                          onChange={() => setSelectedShipping(opt)} className="w-4 h-4 text-gold" />
-                        <div>
-                          <p className="text-sm font-medium text-white">{opt.name}</p>
-                          <p className="text-xs text-cool-gray">{opt.deadline}</p>
-                        </div>
+                    <div key={opt.service} className="flex items-center justify-between p-3 rounded-lg border border-gold bg-gold/10">
+                      <div>
+                        <p className="text-sm font-medium text-white">{opt.name}</p>
+                        <p className="text-xs text-cool-gray">{opt.deadline}</p>
                       </div>
                       <span className="text-sm font-semibold text-white">{opt.price === 0 ? "Grátis" : fmt(opt.price)}</span>
-                    </label>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* 2. ENDEREÇO DETALHADO — só se novo endereço + não retirada */}
-            {useNewAddress && selectedShipping && selectedShipping.service !== "RETIRADA" && (
+            {/* 2. ENDEREÇO DETALHADO — só se novo endereço + área atendida + não retirada */}
+            {!outsideArea && useNewAddress && selectedShipping && selectedShipping.service !== "RETIRADA" && (
               <div className="bg-charcoal p-6 rounded-xl border border-gold/15">
                 <h2 className="text-lg font-semibold text-white mb-4">2. Endereço de entrega</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -319,7 +337,7 @@ export default function CheckoutPage() {
             )}
 
             {/* PAGAMENTO */}
-            {selectedShipping && (
+            {!outsideArea && selectedShipping && (
               <div className="bg-charcoal p-6 rounded-xl border border-gold/15">
                 <h2 className="text-lg font-semibold text-white mb-4">
                   {useNewAddress && selectedShipping.service !== "RETIRADA" ? "3." : "2."} Pagamento

@@ -1,23 +1,21 @@
 /**
- * correios.ts — Cálculo de frete via Melhor Envio
+ * correios.ts — Entrega via motoboy (área restrita)
  *
- * Integração real com a API do Melhor Envio para cotação de frete.
- * Retorna preços e prazos reais de PAC, SEDEX, Jadlog e outras
- * transportadoras disponíveis para o CEP de destino.
+ * A CB Suplementos atende apenas dois municípios: Belém/PA e Petrolina/PE.
+ * Não há mais cotação de frete nacional (Correios/Melhor Envio foi removido).
  *
- * Fallback: se a API falhar, usa tabela por UF (estimativa).
+ * Regra de negócio:
+ *   - CEP fora da whitelist → área não atendida (bloqueia checkout).
+ *   - CEP dentro da whitelist → frete fixo por cidade, ou grátis acima de
+ *     um valor mínimo de subtotal (configurável por cidade).
  *
- * Origem: CB Suplementos (CEP 66079-720 — Belém/PA).
- * TODO: ajustar CEP_ORIGEM quando definir o endereço de despacho real.
+ * VALORES PROVISÓRIOS — ajustar `flatFee` e `freeShippingThreshold` em
+ * CIDADES_ATENDIDAS conforme o cliente definir. Nada além deste arquivo
+ * precisa ser tocado quando os valores chegarem.
+ *
+ * Nome do arquivo mantido como "correios.ts" para não quebrar imports
+ * existentes — o conteúdo não tem mais relação com os Correios.
  */
-
-const CEP_ORIGEM = "66079720";
-
-const MELHOR_ENVIO_TOKEN = process.env.MELHOR_ENVIO_TOKEN || "";
-const ME_SANDBOX = process.env.ME_SANDBOX !== "false"; // default sandbox
-const ME_BASE_URL = ME_SANDBOX
-  ? "https://sandbox.melhorenvio.com.br"
-  : "https://melhorenvio.com.br";
 
 export interface ShippingOption {
   service: string;
@@ -27,10 +25,96 @@ export interface ShippingOption {
   deadlineDays: number;
 }
 
+export interface AddressInfo {
+  cep: string;
+  street: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+}
+
+export interface PackageItem {
+  weight: number; // gramas
+  height: number; // cm
+  width: number; // cm
+  length: number; // cm
+  quantity: number;
+}
+
+// =====================================================
+// ÁREA DE ENTREGA — única fonte de verdade
+// =====================================================
+
+interface CidadeAtendida {
+  /** Nome normalizado (sem acento, lowercase) para comparação. */
+  nomeNormalizado: string;
+  /** Nome de exibição. */
+  nome: string;
+  uf: string;
+  /** Taxa fixa de entrega via motoboy, em reais. */
+  flatFee: number;
+  /** Subtotal mínimo (em reais) para frete grátis. `null` = nunca é grátis. */
+  freeShippingThreshold: number | null;
+  /** Prazo estimado de entrega exibido ao cliente. */
+  deadline: string;
+}
+
+const CIDADES_ATENDIDAS: CidadeAtendida[] = [
+  {
+    nomeNormalizado: "belem",
+    nome: "Belém",
+    uf: "PA",
+    flatFee: 0, // TODO: definir com o cliente (em reais, ex.: 15.00)
+    freeShippingThreshold: null, // TODO: definir com o cliente (em reais, ex.: 150.00)
+    deadline: "Entrega no mesmo dia ou próximo dia útil",
+  },
+  {
+    nomeNormalizado: "petrolina",
+    nome: "Petrolina",
+    uf: "PE",
+    flatFee: 0, // TODO: definir com o cliente
+    freeShippingThreshold: null, // TODO: definir com o cliente
+    deadline: "Entrega no mesmo dia ou próximo dia útil",
+  },
+];
+
+function normalizarNomeCidade(input: string): string {
+  return input
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
+function buscarCidadeAtendida(cidade: string, uf: string): CidadeAtendida | null {
+  const cidadeNormalizada = normalizarNomeCidade(cidade);
+  const ufNormalizada = uf.toUpperCase().trim();
+
+  return (
+    CIDADES_ATENDIDAS.find(
+      (c) => c.nomeNormalizado === cidadeNormalizada && c.uf === ufNormalizada
+    ) ?? null
+  );
+}
+
+/** Erro específico para CEP fora da área de entrega — permite tratamento diferenciado no caller. */
+export class OutsideDeliveryAreaError extends Error {
+  constructor(public city: string, public state: string) {
+    super(
+      `Ainda não entregamos em ${city}/${state}. Atendemos apenas Belém (PA) e Petrolina (PE).`
+    );
+    this.name = "OutsideDeliveryAreaError";
+  }
+}
+
+// =====================================================
+// CONSULTA DE CEP — ViaCEP (mantido)
+// =====================================================
+
 /**
  * Consulta CEP via ViaCEP (gratuito, sem autenticação)
  */
-export async function consultarCep(cep: string) {
+export async function consultarCep(cep: string): Promise<AddressInfo> {
   const cleanCep = cep.replace(/\D/g, "");
 
   if (cleanCep.length !== 8) {
@@ -60,238 +144,68 @@ export async function consultarCep(cep: string) {
   };
 }
 
-export interface PackageItem {
-  weight: number;   // gramas
-  height: number;   // cm
-  width: number;    // cm
-  length: number;   // cm
-  quantity: number;
-}
+// =====================================================
+// CÁLCULO DE FRETE — motoboy, área restrita
+// =====================================================
 
 /**
- * Calcula frete via Melhor Envio (API real).
- * Aceita array de pacotes — um por item do carrinho.
- * Se falhar, cai no fallback com tabela por UF.
+ * Calcula o frete via motoboy para um CEP de destino.
+ *
+ * Lança `OutsideDeliveryAreaError` se o CEP não estiver em Belém/PA ou
+ * Petrolina/PE — o caller (route handler) deve tratar esse erro e
+ * retornar uma resposta clara ao front, bloqueando o checkout.
+ *
+ * `packages` é aceito por compatibilidade com o caller atual, mas não é
+ * usado no cálculo (tarifa fixa não depende de dimensão/peso). Mantido
+ * caso a estratégia mude para um serviço terceirizado com cálculo por
+ * distância/peso no futuro.
  */
 export async function calcularFrete(
   cepDestino: string,
-  packages: PackageItem[]
+  packages: PackageItem[],
+  subtotal: number = 0
 ): Promise<ShippingOption[]> {
   const cleanCep = cepDestino.replace(/\D/g, "");
+  const address = await consultarCep(cleanCep);
 
-  // Loja 100% online — sem retirada local nem motoboy.
-  // Todas as opções vêm via Melhor Envio (ou fallback).
-  const options: ShippingOption[] = [];
-
-  // Tentar Melhor Envio
-  if (MELHOR_ENVIO_TOKEN) {
-    try {
-      const meOptions = await calcularFreteViaMelhorEnvio(cleanCep, packages);
-      options.push(...meOptions);
-    } catch (err) {
-      console.error("[MELHOR_ENVIO_ERROR]", err);
-      const fallbackOptions = await calcularFretePorTabela(cleanCep, packages);
-      options.push(...fallbackOptions);
-    }
-  } else {
-    const fallbackOptions = await calcularFretePorTabela(cleanCep, packages);
-    options.push(...fallbackOptions);
+  const cidade = buscarCidadeAtendida(address.city, address.state);
+  if (!cidade) {
+    throw new OutsideDeliveryAreaError(address.city, address.state);
   }
 
-  // Ordena por preço
-  return options.sort((a, b) => a.price - b.price);
+  const isFree =
+    cidade.freeShippingThreshold !== null && subtotal >= cidade.freeShippingThreshold;
+
+  const option: ShippingOption = {
+    service: "MOTOBOY",
+    name: isFree ? `Entrega via motoboy — ${cidade.nome}` : `Entrega via motoboy — ${cidade.nome}`,
+    price: isFree ? 0 : cidade.flatFee,
+    deadline: cidade.deadline,
+    deadlineDays: 1,
+  };
+
+  return [option];
 }
 
 /**
- * Cotação real via API do Melhor Envio — múltiplos pacotes
+ * Apenas valida se um CEP está na área de entrega, sem calcular preço.
+ * Útil para revalidação no servidor antes de criar o pedido.
  */
-async function calcularFreteViaMelhorEnvio(
-  cepDestino: string,
-  packages: PackageItem[]
-): Promise<ShippingOption[]> {
-  // Montar lista de produtos para o Melhor Envio
-  // Formato: products[] com id, width, height, length, weight, quantity, insurance_value
-  const meProducts = packages.map((pkg, index) => ({
-    id: String(index + 1),
-    width: Math.max(pkg.width || 15, 11),
-    height: Math.max(pkg.height || 4, 2),
-    length: Math.max(pkg.length || 20, 16),
-    weight: Math.max((pkg.weight || 300) / 1000, 0.1),
-    quantity: pkg.quantity || 1,
-    insurance_value: 0,
-  }));
-
-  const body = {
-    from: { postal_code: CEP_ORIGEM },
-    to: { postal_code: cepDestino },
-    products: meProducts,
-    options: {
-      receipt: false,
-      own_hand: false,
-      collect: false,
-      insurance_value: 0,
-    },
-  };
-
-  console.log(`[ME_API] Payload: ${JSON.stringify(body)}`);
-
-  const res = await fetch(`${ME_BASE_URL}/api/v2/me/shipment/calculate`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${MELHOR_ENVIO_TOKEN}`,
-      Accept: "application/json",
-      "User-Agent": "ValQuaresma contato@cbsuplementos.com.br",
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(10000),
-  });
-
-  const rawText = await res.text();
-
-  // Log completo para debug — ver nos logs do Railway
-  console.log(`[ME_API] Status: ${res.status} | URL: ${ME_BASE_URL}`);
-  console.log(`[ME_API] Response: ${rawText.slice(0, 500)}`);
-
-  if (!res.ok) {
-    throw new Error(`Melhor Envio HTTP ${res.status}: ${rawText.slice(0, 200)}`);
-  }
-
-  let data: unknown;
+export async function validarAreaEntrega(
+  cep: string
+): Promise<{ ok: true; address: AddressInfo } | { ok: false; message: string }> {
   try {
-    data = JSON.parse(rawText);
-  } catch {
-    throw new Error(`Melhor Envio retornou JSON inválido: ${rawText.slice(0, 100)}`);
+    const address = await consultarCep(cep);
+    const cidade = buscarCidadeAtendida(address.city, address.state);
+    if (!cidade) {
+      return {
+        ok: false,
+        message: `Ainda não entregamos em ${address.city}/${address.state}. Atendemos apenas Belém (PA) e Petrolina (PE).`,
+      };
+    }
+    return { ok: true, address };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro ao consultar CEP";
+    return { ok: false, message: msg };
   }
-
-  // A API pode retornar objeto de erro em vez de array
-  if (data === null || data === undefined) {
-    throw new Error("Melhor Envio retornou null — verifique se há transportadoras ativas no painel");
-  }
-
-  if (!Array.isArray(data)) {
-    const errObj = data as Record<string, unknown>;
-    const errMsg = errObj?.message || errObj?.error || JSON.stringify(data).slice(0, 200);
-    throw new Error(`Melhor Envio retornou erro: ${errMsg}`);
-  }
-
-  const options: ShippingOption[] = [];
-
-  for (const item of data) {
-    // Pular serviços com erro ou sem preço
-    if (item.error || !item.price) continue;
-
-    const price = parseFloat(item.custom_price || item.price);
-    if (isNaN(price) || price <= 0) continue;
-
-    const deliveryDays = parseInt(item.delivery_time, 10) || 10;
-
-    // Montar nome amigável: "Serviço — Transportadora"
-    const companyName = item.company?.name || "";
-    const serviceName = item.name || "";
-
-    // Remover pontos do início do nome do serviço (ex: ".Package" → "Package")
-    const cleanService = serviceName.replace(/^\.+/, "").trim();
-
-    // Normalizar nomes conhecidos
-    const normalizedCompany = companyName
-      .replace("Correios", "Correios")
-      .replace("Jadlog", "Jadlog")
-      .replace("JeT", "J&T Express")
-      .replace("Loggi", "Loggi")
-      .trim();
-
-    const friendlyName = normalizedCompany
-      ? `${cleanService} — ${normalizedCompany}`
-      : cleanService;
-
-    // Service ID para identificação única
-    const serviceId = item.id?.toString() || `ME_${serviceName.replace(/\s/g, "_")}`;
-
-    options.push({
-      service: serviceId,
-      name: friendlyName,
-      price: Math.round(price * 100) / 100, // arredondar centavos
-      deadline: `${deliveryDays} a ${deliveryDays + 2} dias úteis`,
-      deadlineDays: deliveryDays,
-    });
-  }
-
-  if (options.length === 0) {
-    throw new Error("Nenhuma opção de frete disponível pelo Melhor Envio");
-  }
-
-  return options;
-}
-
-// =====================================================
-// FALLBACK — Tabela por UF (usado quando ME falha)
-// =====================================================
-
-const TABELA_FRETE: Record<string, { pac: number; pacDias: number; sedex: number; sedexDias: number }> = {
-  AC: { pac: 28, pacDias: 10, sedex: 52, sedexDias: 6 },
-  AM: { pac: 22, pacDias: 8,  sedex: 45, sedexDias: 5 },
-  AP: { pac: 20, pacDias: 7,  sedex: 42, sedexDias: 4 },
-  PA: { pac: 15, pacDias: 5,  sedex: 28, sedexDias: 2 },
-  RO: { pac: 30, pacDias: 11, sedex: 55, sedexDias: 6 },
-  RR: { pac: 32, pacDias: 12, sedex: 58, sedexDias: 7 },
-  TO: { pac: 25, pacDias: 9,  sedex: 48, sedexDias: 5 },
-  AL: { pac: 28, pacDias: 9,  sedex: 52, sedexDias: 5 },
-  BA: { pac: 26, pacDias: 8,  sedex: 48, sedexDias: 4 },
-  CE: { pac: 24, pacDias: 7,  sedex: 45, sedexDias: 4 },
-  MA: { pac: 22, pacDias: 6,  sedex: 42, sedexDias: 3 },
-  PB: { pac: 26, pacDias: 8,  sedex: 48, sedexDias: 4 },
-  PE: { pac: 26, pacDias: 8,  sedex: 48, sedexDias: 4 },
-  PI: { pac: 24, pacDias: 7,  sedex: 45, sedexDias: 4 },
-  RN: { pac: 26, pacDias: 8,  sedex: 48, sedexDias: 4 },
-  SE: { pac: 28, pacDias: 9,  sedex: 52, sedexDias: 5 },
-  DF: { pac: 32, pacDias: 9,  sedex: 58, sedexDias: 5 },
-  GO: { pac: 32, pacDias: 9,  sedex: 58, sedexDias: 5 },
-  MT: { pac: 35, pacDias: 11, sedex: 62, sedexDias: 6 },
-  MS: { pac: 38, pacDias: 12, sedex: 65, sedexDias: 7 },
-  ES: { pac: 35, pacDias: 10, sedex: 62, sedexDias: 5 },
-  MG: { pac: 35, pacDias: 10, sedex: 62, sedexDias: 5 },
-  RJ: { pac: 38, pacDias: 11, sedex: 65, sedexDias: 6 },
-  SP: { pac: 38, pacDias: 11, sedex: 65, sedexDias: 6 },
-  PR: { pac: 42, pacDias: 12, sedex: 70, sedexDias: 7 },
-  SC: { pac: 45, pacDias: 13, sedex: 72, sedexDias: 7 },
-  RS: { pac: 48, pacDias: 14, sedex: 75, sedexDias: 8 },
-};
-
-const TABELA_PADRAO = { pac: 40, pacDias: 12, sedex: 68, sedexDias: 7 };
-
-async function calcularFretePorTabela(
-  cepDestino: string,
-  packages: PackageItem[]
-): Promise<ShippingOption[]> {
-  let uf = "";
-  try {
-    const address = await consultarCep(cepDestino);
-    uf = address.state;
-  } catch { /* sem UF, usa padrão */ }
-
-  const tabela = TABELA_FRETE[uf] || TABELA_PADRAO;
-
-  // Soma peso total de todos os pacotes
-  const totalWeight = packages.reduce((sum, p) => sum + (p.weight || 300) * (p.quantity || 1), 0);
-  const pesoKg = Math.max(totalWeight / 1000, 0.3);
-  const pesoExtra = Math.max(0, Math.ceil(pesoKg - 1));
-  const adicionalPeso = pesoExtra * 5;
-
-  return [
-    {
-      service: "PAC",
-      name: "PAC — Econômico (estimativa)",
-      price: tabela.pac + adicionalPeso,
-      deadline: `${tabela.pacDias} a ${tabela.pacDias + 2} dias úteis`,
-      deadlineDays: tabela.pacDias,
-    },
-    {
-      service: "SEDEX",
-      name: "SEDEX — Expresso (estimativa)",
-      price: tabela.sedex + adicionalPeso,
-      deadline: `${tabela.sedexDias} a ${tabela.sedexDias + 1} dias úteis`,
-      deadlineDays: tabela.sedexDias,
-    },
-  ];
 }

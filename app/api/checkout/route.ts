@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { prisma } from "@/lib/db";
 import { createPixOrder, createCardOrder, getPublicKey } from "@/lib/mercadopago";
+import { calcularFrete, OutsideDeliveryAreaError } from "@/lib/correios";
 
 export async function GET() {
   return NextResponse.json({ publicKey: getPublicKey() });
@@ -23,8 +24,6 @@ export async function POST(request: Request) {
     const {
       address,
       shippingMethod,
-      shippingCost,
-      shippingDeadline,
       paymentMethod,
       cardToken,
       installments = 1,
@@ -70,12 +69,39 @@ export async function POST(request: Request) {
       }
     }
 
+    // Calcula subtotal (precisa estar disponível antes da revalidação de frete)
+    const subtotal = cart.items.reduce((sum, item) => {
+      const price = item.variant ? Number(item.variant.price) : Number(item.product.price);
+      return sum + price * item.quantity;
+    }, 0);
+
     // Cria endereço se não for retirada
     let addressId: string | null = null;
+    let shippingCostValidated = 0;
+    let shippingDeadlineValidated: string | null = null;
     if (shippingMethod !== "RETIRADA") {
       if (!address || !address.cep || !address.street || !address.number) {
         return NextResponse.json({ error: "Endereço incompleto." }, { status: 400 });
       }
+
+      // REVALIDAÇÃO DE FRETE — nunca confiar no valor enviado pelo cliente.
+      // Recalcula a área de entrega e o frete no servidor a partir do CEP real.
+      let freightOptions;
+      try {
+        freightOptions = await calcularFrete(address.cep, [], subtotal);
+      } catch (err) {
+        if (err instanceof OutsideDeliveryAreaError) {
+          console.log("[CHECKOUT] CEP fora da área de entrega:", address.cep);
+          return NextResponse.json({ error: err.message }, { status: 422 });
+        }
+        console.error("[CHECKOUT_SHIPPING_REVALIDATION_ERROR]", err);
+        return NextResponse.json(
+          { error: "Não foi possível validar o frete para esse CEP." },
+          { status: 502 }
+        );
+      }
+      shippingCostValidated = freightOptions[0]?.price ?? 0;
+      shippingDeadlineValidated = freightOptions[0]?.deadline ?? null;
 
       const customer = await prisma.customer.findUnique({ where: { id: session.id } });
       if (!customer) {
@@ -99,13 +125,8 @@ export async function POST(request: Request) {
       console.log("[CHECKOUT] Endereço criado:", addressId);
     }
 
-    // Calcula totais
-    const subtotal = cart.items.reduce((sum, item) => {
-      const price = item.variant ? Number(item.variant.price) : Number(item.product.price);
-      return sum + price * item.quantity;
-    }, 0);
-
-    const shipping = shippingMethod === "RETIRADA" ? 0 : Number(shippingCost) || 0;
+    // Calcula totais — usa o frete REVALIDADO no servidor, nunca o do client
+    const shipping = shippingMethod === "RETIRADA" ? 0 : shippingCostValidated;
     const total = subtotal + shipping;
     console.log("[CHECKOUT] Totais — subtotal:", subtotal, "frete:", shipping, "total:", total);
 
@@ -125,7 +146,7 @@ export async function POST(request: Request) {
         shippingCost: shipping,
         total,
         shippingMethod: shippingMethod || null,
-        shippingDeadline: shippingDeadline || null,
+        shippingDeadline: shippingMethod === "RETIRADA" ? null : shippingDeadlineValidated,
         paymentMethod,
         customerId: session.id,
         addressId,
