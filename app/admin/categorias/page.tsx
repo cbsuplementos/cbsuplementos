@@ -73,13 +73,13 @@ export default async function CategoriesPage({ searchParams }: PageProps) {
               name="q"
               defaultValue={q}
               placeholder="Nome ou slug da categoria"
-              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
           </div>
           <div>
             <label className="block text-xs font-medium text-neutral-600 mb-1">Status</label>
             <select name="status" defaultValue={status}
-              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-amber-500">
               <option value="">Todas</option>
               <option value="ativa">Ativa</option>
               <option value="inativa">Inativa</option>
@@ -88,7 +88,7 @@ export default async function CategoriesPage({ searchParams }: PageProps) {
           <div>
             <label className="block text-xs font-medium text-neutral-600 mb-1">Produtos</label>
             <select name="produtos" defaultValue={produtos}
-              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-amber-500">
               <option value="">Todas</option>
               <option value="com">Com produtos</option>
               <option value="sem">Sem produtos</option>

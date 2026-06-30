@@ -93,13 +93,13 @@ export default async function ProductsPage({ searchParams }: PageProps) {
               name="q"
               defaultValue={q}
               placeholder="Nome ou slug do produto"
-              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
           </div>
           <div>
             <label className="block text-xs font-medium text-neutral-600 mb-1">Categoria</label>
             <select name="categoria" defaultValue={categoria}
-              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-amber-500">
               <option value="">Todas</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -109,7 +109,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
           <div>
             <label className="block text-xs font-medium text-neutral-600 mb-1">Status</label>
             <select name="status" defaultValue={status}
-              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-amber-500">
               <option value="">Todos</option>
               <option value="ativo">Ativo</option>
               <option value="inativo">Inativo</option>
@@ -118,7 +118,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
           <div>
             <label className="block text-xs font-medium text-neutral-600 mb-1">Badge</label>
             <select name="badge" defaultValue={badge}
-              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-amber-500">
               <option value="">Todos</option>
               {Object.entries(badgeLabels).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -128,7 +128,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
           <div>
             <label className="block text-xs font-medium text-neutral-600 mb-1">Estoque</label>
             <select name="estoque" defaultValue={estoque}
-              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-amber-500">
               <option value="">Todos</option>
               <option value="baixo">Baixo (1-3)</option>
               <option value="esgotado">Esgotado (0)</option>
