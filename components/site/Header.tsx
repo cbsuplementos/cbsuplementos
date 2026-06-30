@@ -50,7 +50,7 @@ export default function Header() {
           sticky top-0 z-40 w-full
           bg-noir/95 backdrop-blur-sm
           border-b border-gold/20
-          transition-all duration-300
+          transition-[padding] duration-300
           ${isScrolled ? "py-2" : "py-3 sm:py-4"}
         `}
       >

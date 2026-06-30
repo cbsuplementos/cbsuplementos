@@ -106,6 +106,8 @@ model HeroSlide {
   active       Boolean          @default(true)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
+  imageMobile     String?
+  contentPosition HeroContentPosition @default(BOTTOM_CENTER)
 
   @@index([active, priority])
   @@index([startsAt, endsAt])
@@ -238,6 +240,18 @@ model OrderItem {
 
   @@index([orderId])
   @@map("order_items")
+}
+
+enum HeroContentPosition {
+  TOP_LEFT
+  TOP_CENTER
+  TOP_RIGHT
+  CENTER_LEFT
+  CENTER_CENTER
+  CENTER_RIGHT
+  BOTTOM_LEFT
+  BOTTOM_CENTER
+  BOTTOM_RIGHT
 }
 
 enum HeroButtonTarget {

@@ -13,12 +13,25 @@ type ActionResult = { success: true } | { error: string };
 
 function parseSlideForm(formData: FormData) {
   const image = (formData.get("image") as string)?.trim();
+  const imageMobile = (formData.get("imageMobile") as string)?.trim() || null;
   const title = (formData.get("title") as string)?.trim() || null;
   const subtitle = (formData.get("subtitle") as string)?.trim() || null;
   const buttonText = (formData.get("buttonText") as string)?.trim() || null;
   const buttonUrl = (formData.get("buttonUrl") as string)?.trim() || null;
   const buttonTarget = formData.get("buttonTarget") === "BLANK" ? "BLANK" : "SELF";
   const textColor = formData.get("textColor") === "DARK" ? "DARK" : "LIGHT";
+
+  // Posição do conteúdo — validada contra a whitelist das 9 posições.
+  const VALID_POSITIONS = [
+    "TOP_LEFT", "TOP_CENTER", "TOP_RIGHT",
+    "CENTER_LEFT", "CENTER_CENTER", "CENTER_RIGHT",
+    "BOTTOM_LEFT", "BOTTOM_CENTER", "BOTTOM_RIGHT",
+  ];
+  const rawPosition = (formData.get("contentPosition") as string)?.trim() ?? "";
+  const contentPosition = VALID_POSITIONS.includes(rawPosition)
+    ? rawPosition
+    : "BOTTOM_CENTER";
+
   const duration = Math.min(30, Math.max(2, parseInt((formData.get("duration") as string) || "5", 10)));
   const priority = parseInt((formData.get("priority") as string) || "0", 10);
 
@@ -27,7 +40,7 @@ function parseSlideForm(formData: FormData) {
   const startsAt = startsAtRaw ? new Date(startsAtRaw) : null;
   const endsAt = endsAtRaw ? new Date(endsAtRaw) : null;
 
-  return { image, title, subtitle, buttonText, buttonUrl, buttonTarget, textColor, duration, priority, startsAt, endsAt };
+  return { image, imageMobile, title, subtitle, buttonText, buttonUrl, buttonTarget, textColor, contentPosition, duration, priority, startsAt, endsAt };
 }
 
 export async function createHeroSlide(formData: FormData): Promise<ActionResult> {

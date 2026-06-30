@@ -9,20 +9,47 @@ export const dynamic = "force-dynamic";
 /**
  * /admin/categorias
  *
- * Lista todas as categorias com:
- * - Imagem (se houver)
- * - Nome e descrição
- * - Contagem de produtos
- * - Status (ativa/inativa)
- * - Ações: editar, ativar/desativar, deletar
+ * Lista todas as categorias com filtros server-side (busca, status,
+ * presença de produtos). Mesmo padrão da tela de Pedidos/Produtos:
+ * estado do filtro na URL via <form method="GET">.
  */
-export default async function CategoriesPage() {
-  const categories = await prisma.category.findMany({
-    orderBy: [{ order: "asc" }, { createdAt: "desc" }],
-    include: {
-      _count: { select: { products: true } },
-    },
-  });
+
+interface PageProps {
+  searchParams: Promise<{
+    q?: string;        // busca por nome/slug
+    status?: string;   // "ativa" | "inativa"
+    produtos?: string; // "com" | "sem"
+  }>;
+}
+
+export default async function CategoriesPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const q = params.q?.trim() || "";
+  const status = params.status || "";
+  const produtos = params.produtos || "";
+
+  const where: Record<string, unknown> = {};
+  if (q) {
+    where.OR = [
+      { name: { contains: q, mode: "insensitive" } },
+      { slug: { contains: q, mode: "insensitive" } },
+    ];
+  }
+  if (status === "ativa") where.active = true;
+  if (status === "inativa") where.active = false;
+  if (produtos === "com") where.products = { some: {} };
+  if (produtos === "sem") where.products = { none: {} };
+
+  const hasFilters = !!(q || status || produtos);
+
+  const [categories, allCount] = await Promise.all([
+    prisma.category.findMany({
+      where,
+      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
+      include: { _count: { select: { products: true } } },
+    }),
+    prisma.category.count(),
+  ]);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -36,10 +63,67 @@ export default async function CategoriesPage() {
         }
       />
 
+      {/* ====== FILTROS ====== */}
+      <div className="bg-white p-4 rounded-xl border border-neutral-200 mb-6">
+        <form method="GET" className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-medium text-neutral-600 mb-1">Buscar</label>
+            <input
+              type="text"
+              name="q"
+              defaultValue={q}
+              placeholder="Nome ou slug da categoria"
+              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 mb-1">Status</label>
+            <select name="status" defaultValue={status}
+              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+              <option value="">Todas</option>
+              <option value="ativa">Ativa</option>
+              <option value="inativa">Inativa</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 mb-1">Produtos</label>
+            <select name="produtos" defaultValue={produtos}
+              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+              <option value="">Todas</option>
+              <option value="com">Com produtos</option>
+              <option value="sem">Sem produtos</option>
+            </select>
+          </div>
+          <button type="submit" className="px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800">
+            Filtrar
+          </button>
+          {hasFilters && (
+            <Link href="/admin/categorias" className="px-4 py-2 text-sm text-neutral-600 hover:text-neutral-900">
+              Limpar
+            </Link>
+          )}
+        </form>
+      </div>
+
       {categories.length === 0 ? (
-        <EmptyState />
+        hasFilters ? (
+          <div className="bg-white border border-neutral-200 p-12 text-center rounded-xl">
+            <p className="font-display text-2xl text-noir mb-2">Nenhuma categoria encontrada</p>
+            <p className="text-neutral-500 mb-6">Tente ajustar ou limpar os filtros.</p>
+            <Link href="/admin/categorias" className="text-amber-600 hover:text-amber-700 font-medium underline">
+              Limpar filtros
+            </Link>
+          </div>
+        ) : (
+          <EmptyState />
+        )
       ) : (
         <div className="bg-white border border-neutral-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-neutral-200">
+            <p className="text-sm text-neutral-600">
+              Mostrando {categories.length} de {allCount} categorias
+            </p>
+          </div>
           <table className="w-full">
             <thead className="bg-noir text-white">
               <tr>

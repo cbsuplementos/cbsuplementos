@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { prisma } from "@/lib/db";
+import { PENDING_ORDER_TIMEOUT_MINUTES } from "@/lib/orders";
 
 /**
  * GET /api/orders/check?numero=CB-XXXXX
@@ -23,14 +24,31 @@ export async function GET(request: Request) {
 
   const order = await prisma.order.findUnique({
     where: { orderNumber: numero },
-    select: { customerId: true, status: true, paidAt: true, notes: true, paymentMethod: true },
+    select: { customerId: true, status: true, paidAt: true, notes: true, paymentMethod: true, createdAt: true },
   });
 
   if (!order || order.customerId !== session.id) {
     return NextResponse.json({ paid: false }, { status: 404 });
   }
 
-  const paid = order.status === "PAYMENT_APPROVED" || !!order.paidAt;
+  let status = order.status;
+  let expired = false;
+
+  // Expiração sob demanda: o Mercado Pago não envia webhook quando um Pix
+  // expira. Se este pedido está PENDING há mais que o timeout, cancela aqui.
+  if (order.status === "PENDING") {
+    const cutoff = new Date(Date.now() - PENDING_ORDER_TIMEOUT_MINUTES * 60 * 1000);
+    if (order.createdAt < cutoff) {
+      await prisma.order.update({
+        where: { orderNumber: numero },
+        data: { status: "CANCELLED", paymentStatus: "expired" },
+      });
+      status = "CANCELLED";
+      expired = true;
+    }
+  }
+
+  const paid = status === "PAYMENT_APPROVED" || !!order.paidAt;
 
   // Parse pix data do campo notes
   let pixData = null;
@@ -44,7 +62,8 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     paid,
-    status: order.status,
+    status,
+    expired,
     pixData,
   });
 }

@@ -38,10 +38,11 @@ export default function AddToCartButton({
     try {
       // addToCart já faz o POST em /api/cart e atualiza a contagem do header.
       // Antes havia também um fetch manual aqui, o que adicionava o item
-      // DUAS vezes (quantidade 2). Agora é uma única chamada.
-      const ok = await addToCart(productId, variantId);
-      if (!ok) {
-        setError("Erro ao adicionar");
+      // DUAS vezes (quantidade 2). Agora é uma única chamada, e a mensagem
+      // de erro da API (ex.: estoque insuficiente) é propagada ao usuário.
+      const result = await addToCart(productId, variantId);
+      if (!result.ok) {
+        setError(result.error || "Erro ao adicionar");
         setLoading(false);
         setTimeout(() => setError(""), 4000);
         return;

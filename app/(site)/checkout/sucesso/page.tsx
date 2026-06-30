@@ -11,6 +11,7 @@ function SuccessContent() {
 
   const [copied, setCopied] = useState(false);
   const [paid, setPaid] = useState(false);
+  const [expired, setExpired] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pixCode, setPixCode] = useState("");
 
@@ -25,6 +26,10 @@ function SuccessContent() {
         setPaid(true);
       }
 
+      if (data.expired || data.status === "CANCELLED") {
+        setExpired(true);
+      }
+
       if (data.pixData) {
         if (data.pixData.qrCode) setPixCode(data.pixData.qrCode);
       }
@@ -35,15 +40,18 @@ function SuccessContent() {
     }
   }, [pedido]);
 
-  // Fetch inicial + polling a cada 5s
+  // Fetch inicial
   useEffect(() => {
     fetchOrderData();
+  }, [fetchOrderData]);
 
-    if (metodo === "pix") {
-      const interval = setInterval(fetchOrderData, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [fetchOrderData, metodo]);
+  // Polling a cada 5s — para automaticamente quando o pedido é pago ou expira
+  useEffect(() => {
+    if (metodo !== "pix") return;
+    if (paid || expired) return;
+    const interval = setInterval(fetchOrderData, 5000);
+    return () => clearInterval(interval);
+  }, [metodo, paid, expired, fetchOrderData]);
 
   function copyPix() {
     navigator.clipboard.writeText(pixCode);
@@ -81,9 +89,41 @@ function SuccessContent() {
             Pedido <strong>{pedido}</strong> recebido. Em breve entraremos em contato
             para combinar a entrega.
           </p>
-          <Link href="/produtos" className="block py-3 bg-gold text-noir font-bold uppercase tracking-wider rounded-lg hover:bg-gold-light">
-            Continuar comprando
-          </Link>
+          <div className="space-y-3">
+            <Link href="/minha-conta/pedidos" className="block py-3 bg-gold text-noir font-bold uppercase tracking-wider rounded-lg hover:bg-gold-light">
+              Meus pedidos
+            </Link>
+            <Link href="/produtos" className="block py-3 border border-gold/40 text-gold font-bold uppercase tracking-wider rounded-lg hover:bg-gold/10 transition-colors">
+              Continuar comprando
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ============ PEDIDO EXPIRADO / CANCELADO ============
+  if (expired) {
+    return (
+      <section className="min-h-screen bg-noir flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <div className="text-6xl mb-4">⌛</div>
+          <h1 className="text-2xl sm:text-3xl font-bold font-display text-white mb-2">
+            Pedido cancelado
+          </h1>
+          <p className="text-cool-gray mb-6">
+            O pagamento do pedido <strong>{pedido}</strong> não foi confirmado a
+            tempo e ele foi cancelado automaticamente. Você pode refazer a compra
+            quando quiser.
+          </p>
+          <div className="space-y-3">
+            <Link href="/produtos" className="block py-3 bg-gold text-noir font-bold uppercase tracking-wider rounded-lg hover:bg-gold-light">
+              Comprar novamente
+            </Link>
+            <Link href="/minha-conta/pedidos" className="block py-3 border border-gold/40 text-gold font-bold uppercase tracking-wider rounded-lg hover:bg-gold/10 transition-colors">
+              Meus pedidos
+            </Link>
+          </div>
         </div>
       </section>
     );

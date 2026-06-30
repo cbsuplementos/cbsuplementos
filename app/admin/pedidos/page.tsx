@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
+import { expireStalePendingOrders } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,10 @@ export default async function AdminPedidosPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const statusFilter = params.status || "";
   const searchTerm = params.q || "";
+
+  // Limpa pedidos PENDING expirados antes de calcular métricas e listar,
+  // para que não fiquem "presos" no painel aguardando pagamento eterno.
+  await expireStalePendingOrders();
 
   // ====== MÉTRICAS ======
   const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);

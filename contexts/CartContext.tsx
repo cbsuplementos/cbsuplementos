@@ -14,7 +14,7 @@ interface CartContextType {
   loading: boolean;
   refreshCart: () => Promise<void>;
   refreshSession: () => Promise<void>;
-  addToCart: (productId: string, variantId?: string) => Promise<boolean>;
+  addToCart: (productId: string, variantId?: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -24,7 +24,7 @@ const CartContext = createContext<CartContextType>({
   loading: true,
   refreshCart: async () => {},
   refreshSession: async () => {},
-  addToCart: async () => false,
+  addToCart: async () => ({ ok: false }),
   logout: async () => {},
 });
 
@@ -64,22 +64,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = useCallback(
     async (productId: string, variantId?: string) => {
-      if (!customer) return false;
+      if (!customer) return { ok: false, error: "Faça login para adicionar ao carrinho." };
       try {
         const res = await fetch("/api/cart", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ productId, variantId }),
         });
+        const data = await res.json().catch(() => ({}));
         if (res.ok) {
           // Sincroniza a contagem real do servidor (em vez de assumir +1),
           // garantindo que o badge do header reflita o carrinho de fato.
           await refreshCart();
-          return true;
+          return { ok: true };
         }
-        return false;
+        // Propaga a mensagem da API (ex.: "Apenas 2 unidades disponíveis de X").
+        return { ok: false, error: data.error || "Erro ao adicionar ao carrinho." };
       } catch {
-        return false;
+        return { ok: false, error: "Erro de conexão." };
       }
     },
     [customer, refreshCart]

@@ -6,15 +6,34 @@ import { Input, Textarea, Select, Checkbox, Button } from "@/components/admin/Fo
 import ImageUpload from "@/components/admin/ImageUpload";
 import { createHeroSlide, updateHeroSlide } from "@/app/admin/hero/actions";
 
+type ContentPosition =
+  | "TOP_LEFT" | "TOP_CENTER" | "TOP_RIGHT"
+  | "CENTER_LEFT" | "CENTER_CENTER" | "CENTER_RIGHT"
+  | "BOTTOM_LEFT" | "BOTTOM_CENTER" | "BOTTOM_RIGHT";
+
+const POSITION_OPTIONS: { value: ContentPosition; label: string }[] = [
+  { value: "TOP_LEFT", label: "Topo · Esquerda" },
+  { value: "TOP_CENTER", label: "Topo · Centro" },
+  { value: "TOP_RIGHT", label: "Topo · Direita" },
+  { value: "CENTER_LEFT", label: "Meio · Esquerda" },
+  { value: "CENTER_CENTER", label: "Meio · Centro" },
+  { value: "CENTER_RIGHT", label: "Meio · Direita" },
+  { value: "BOTTOM_LEFT", label: "Base · Esquerda" },
+  { value: "BOTTOM_CENTER", label: "Base · Centro (padrão)" },
+  { value: "BOTTOM_RIGHT", label: "Base · Direita" },
+];
+
 type Slide = {
   id: string;
   image: string;
+  imageMobile: string | null;
   title: string | null;
   subtitle: string | null;
   buttonText: string | null;
   buttonUrl: string | null;
   buttonTarget: "SELF" | "BLANK";
   textColor: "LIGHT" | "DARK";
+  contentPosition: ContentPosition;
   duration: number;
   priority: number;
   startsAt: Date | null;
@@ -38,6 +57,7 @@ export default function HeroSlideForm({ slide }: HeroSlideFormProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [image, setImage] = useState<string>(slide?.image ?? "");
+  const [imageMobile, setImageMobile] = useState<string>(slide?.imageMobile ?? "");
   const isEditing = !!slide;
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -45,6 +65,7 @@ export default function HeroSlideForm({ slide }: HeroSlideFormProps) {
     setError(null);
     const formData = new FormData(e.currentTarget);
     formData.set("image", image);
+    formData.set("imageMobile", imageMobile);
 
     startTransition(async () => {
       const result = isEditing
@@ -62,14 +83,28 @@ export default function HeroSlideForm({ slide }: HeroSlideFormProps) {
       {/* Imagem */}
       <section className="space-y-4">
         <h2 className="font-display text-xl text-noir border-b border-noir/10 pb-2">Imagem do Banner</h2>
-        <div className="max-w-sm">
+        <p className="text-sm text-neutral-500">
+          A imagem desktop é obrigatória. A imagem mobile é opcional — quando
+          informada, é exibida no celular no lugar da desktop (evita cortes em
+          telas verticais). Se a sua arte já tem todo o texto embutido na
+          imagem, pode deixar o título e o subtítulo abaixo em branco.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-6 max-w-3xl">
           <ImageUpload
-            label="Imagem (obrigatória)"
+            label="Imagem desktop (obrigatória)"
             value={image}
             onChange={setImage}
             onRemove={() => setImage("")}
             aspectRatio="landscape"
-            hint="Prefira imagens horizontais, mínimo 1200x600px."
+            hint="Horizontal — ideal: 1920×800px."
+          />
+          <ImageUpload
+            label="Imagem mobile (opcional)"
+            value={imageMobile}
+            onChange={setImageMobile}
+            onRemove={() => setImageMobile("")}
+            aspectRatio="portrait"
+            hint="Vertical — ideal: 800×1200px."
           />
         </div>
       </section>
@@ -90,6 +125,12 @@ export default function HeroSlideForm({ slide }: HeroSlideFormProps) {
           />
         </div>
         <Textarea label="Subtítulo (opcional)" name="subtitle" rows={2} defaultValue={slide?.subtitle ?? ""} placeholder="Uma frase curta e impactante" />
+        <Select
+          label="Posição do conteúdo sobre a imagem"
+          name="contentPosition"
+          defaultValue={slide?.contentPosition ?? "BOTTOM_CENTER"}
+          options={POSITION_OPTIONS}
+        />
       </section>
 
       {/* CTA */}

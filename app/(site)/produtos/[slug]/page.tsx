@@ -6,6 +6,7 @@ import ImageGallery from "@/components/produtos/ImageGallery";
 import VariantSelector from "@/components/produtos/VariantSelector";
 import WhatsAppProductButton from "@/components/produtos/WhatsAppProductButton";
 import AddToCartButton from "@/components/produtos/AddToCartButton";
+import BuyNowButton from "@/components/produtos/BuyNowButton";
 
 /**
  * /produtos/[slug] — Página de detalhe do produto
@@ -225,6 +226,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
               {/* Botões de ação — CTA principal */}
               <div className="mt-8 sticky bottom-4 lg:static space-y-3">
                 <AddToCartButton
+                  productId={product.id}
+                  stock={product.stock}
+                  hasVariants={hasVariants}
+                />
+                <BuyNowButton
                   productId={product.id}
                   stock={product.stock}
                   hasVariants={hasVariants}

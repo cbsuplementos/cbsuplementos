@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCustomerSession } from "@/lib/customer-auth";
 import { prisma } from "@/lib/db";
+import { expireStalePendingOrders } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,10 @@ const statusLabels: Record<string, { label: string; color: string }> = {
 export default async function MeusPedidosPage() {
   const session = await getCustomerSession();
   if (!session) redirect("/conta/login");
+
+  // Garante que pedidos Pix não pagos apareçam como cancelados (e não
+  // "aguardando pagamento" para sempre) também na visão do cliente.
+  await expireStalePendingOrders();
 
   const orders = await prisma.order.findMany({
     where: { customerId: session.id },
