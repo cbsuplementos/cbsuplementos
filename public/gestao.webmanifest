@@ -1,0 +1,26 @@
+{
+  "name": "CB Gestão — Estoque",
+  "short_name": "CB Gestão",
+  "description": "Consulta e controle de estoque do CB Suplementos.",
+  "start_url": "/gestao",
+  "scope": "/gestao",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/logo/cb-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo/cb-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

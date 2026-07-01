@@ -21,12 +21,13 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const isAdminRoute = pathname.startsWith("/admin");
+  const isGestaoRoute = pathname.startsWith("/gestao");
   const isAdminLoginPage = pathname === "/login";
   const isCustomerProtected = ["/carrinho", "/checkout", "/minha-conta"].some((p) => pathname.startsWith(p));
   const isCustomerAuthPage = ["/conta/login", "/conta/cadastro"].includes(pathname);
 
-  // --- ADMIN AUTH (NextAuth) ---
-  if (isAdminRoute || isAdminLoginPage) {
+  // --- ADMIN + GESTÃO AUTH (NextAuth: ADMIN ou STAFF) ---
+  if (isAdminRoute || isGestaoRoute || isAdminLoginPage) {
     const token = await getToken({
       req,
       secret: process.env.AUTH_SECRET,
@@ -42,7 +43,7 @@ export async function middleware(req: NextRequest) {
 
     const isLoggedIn = !!tokenFallback;
 
-    if (isAdminRoute && !isLoggedIn) {
+    if ((isAdminRoute || isGestaoRoute) && !isLoggedIn) {
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);
@@ -77,6 +78,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     "/admin/:path*",
+    "/gestao/:path*",
     "/login",
     "/carrinho",
     "/checkout/:path*",
