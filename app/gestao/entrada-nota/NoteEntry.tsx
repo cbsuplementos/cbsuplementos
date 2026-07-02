@@ -158,7 +158,6 @@ export function NoteEntry({
           ref={fileRef}
           type="file"
           accept="image/*"
-          capture="environment"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -186,9 +185,9 @@ export function NoteEntry({
               </svg>
             </div>
             <div>
-              <p className="font-sans text-base font-medium text-white">Fotografar ou enviar a nota</p>
+              <p className="font-sans text-base font-medium text-white">Enviar ou fotografar a nota</p>
               <p className="mt-1 font-sans text-xs text-cool-gray">
-                A leitura acontece no seu aparelho, sem enviar a nota pra fora.
+                Escolha da galeria ou tire uma foto. A leitura acontece no seu aparelho.
               </p>
             </div>
           </button>
