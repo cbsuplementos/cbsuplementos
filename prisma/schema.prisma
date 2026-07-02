@@ -134,6 +134,18 @@ model StockMovement {
   @@map("stock_movements")
 }
 
+model NoteItemAlias {
+  id           String   @id @default(cuid())
+  supplierCode String   @unique
+  description  String?
+  productId    String?
+  variantId    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("note_item_aliases")
+}
+
 model HeroSlide {
   id           String           @id @default(cuid())
   image        String
