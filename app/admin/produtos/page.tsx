@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { PageHeader, Button } from "@/components/admin/FormFields";
 import ProductActions from "@/components/admin/ProductActions";
 import { formatPrice } from "@/lib/utils";
+import { effectiveStock, startingPrice } from "@/lib/product-stock";
 
 export const dynamic = "force-dynamic";
 
@@ -52,8 +53,9 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   if (status === "ativo") where.active = true;
   if (status === "inativo") where.active = false;
   if (badge && badgeLabels[badge]) where.badge = badge;
-  if (estoque === "esgotado") where.stock = { lte: 0 };
-  if (estoque === "baixo") where.stock = { gt: 0, lte: 3 };
+  // O filtro de estoque NÃO entra no where: produto com variações tem
+  // product.stock = 0/null e o estoque real na soma das variações. Ele é
+  // aplicado abaixo, em memória, sobre o estoque efetivo.
 
   const hasFilters = !!(q || categoria || status || badge || estoque);
 
@@ -62,7 +64,10 @@ export default async function ProductsPage({ searchParams }: PageProps) {
     prisma.product.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { category: { select: { name: true } } },
+      include: {
+        category: { select: { name: true } },
+        variants: { select: { stock: true, price: true } },
+      },
     }),
     prisma.category.findMany({
       orderBy: { name: "asc" },
@@ -70,6 +75,21 @@ export default async function ProductsPage({ searchParams }: PageProps) {
     }),
     prisma.product.count(),
   ]);
+
+  // Estoque efetivo + menor preço (regra única de lib/product-stock)
+  const rows = products
+    .map((product) => ({
+      product,
+      stock: effectiveStock(product.stock, product.variants),
+      fromPrice: startingPrice(product.price, product.variants),
+      variantCount: product.variants.length,
+    }))
+    .filter((r) => {
+      if (estoque === "esgotado") return r.stock === 0;
+      if (estoque === "baixo")
+        return r.stock !== null && r.stock > 0 && r.stock <= 5;
+      return true;
+    });
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -130,7 +150,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
             <select name="estoque" defaultValue={estoque}
               className="px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-amber-500">
               <option value="">Todos</option>
-              <option value="baixo">Baixo (1-3)</option>
+              <option value="baixo">Baixo (1-5)</option>
               <option value="esgotado">Esgotado (0)</option>
             </select>
           </div>
@@ -145,7 +165,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
         </form>
       </div>
 
-      {products.length === 0 ? (
+      {rows.length === 0 ? (
         hasFilters ? (
           <div className="bg-white border border-neutral-200 p-12 text-center rounded-xl">
             <p className="font-display text-2xl text-noir mb-2">Nenhum produto encontrado</p>
@@ -161,7 +181,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
         <div className="bg-white border border-neutral-200 overflow-hidden">
           <div className="px-4 py-3 border-b border-neutral-200">
             <p className="text-sm text-neutral-600">
-              Mostrando {products.length} de {allCount} produtos
+              Mostrando {rows.length} de {allCount} produtos
             </p>
           </div>
           <div className="overflow-x-auto">
@@ -192,7 +212,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-noir/5">
-                {products.map((product) => (
+                {rows.map(({ product, stock, fromPrice, variantCount }) => (
                   <tr key={product.id} className="hover:bg-neutral-50">
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
@@ -222,10 +242,35 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                       {product.category.name}
                     </td>
                     <td className="px-4 py-4 text-sm text-noir font-medium">
-                      {formatPrice(product.price.toString())}
+                      {variantCount > 0 ? (
+                        <span>
+                          <span className="block text-[10px] uppercase tracking-wider text-neutral-400">
+                            a partir de
+                          </span>
+                          {formatPrice(String(fromPrice))}
+                        </span>
+                      ) : (
+                        formatPrice(product.price.toString())
+                      )}
                     </td>
                     <td className="px-4 py-4 text-sm text-noir">
-                      {product.stock ?? "—"}
+                      {stock === null ? (
+                        <span
+                          className="text-neutral-400"
+                          title="Sem controle de estoque — o site vende sem limite"
+                        >
+                          sem controle
+                        </span>
+                      ) : (
+                        <span className={stock === 0 ? "text-red-600 font-medium" : stock <= 5 ? "text-amber-600 font-medium" : ""}>
+                          {stock}
+                        </span>
+                      )}
+                      {variantCount > 0 && (
+                        <span className="ml-1 text-[10px] text-neutral-400">
+                          em {variantCount} var.
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-4">
                       {product.badge !== "NONE" ? (

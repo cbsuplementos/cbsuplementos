@@ -53,7 +53,7 @@ export function StockPanel({
                     Custo <span className="text-white/80">{brl(v.cost)}</span>
                   </span>
                   <span>
-                    Revenda <span className="text-gold">{brl(v.resale)}</span>
+                    Venda <span className="text-gold">{brl(v.resale)}</span>
                   </span>
                 </div>
               </div>

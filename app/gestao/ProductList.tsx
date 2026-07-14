@@ -13,7 +13,7 @@ export interface ProductRow {
   active: boolean;
   totalStock: number;
   variantCount: number;
-  fromResale: number | null;
+  fromPrice: number | null;
 }
 
 export function ProductList({ rows }: { rows: ProductRow[] }) {
@@ -108,10 +108,10 @@ export function ProductList({ rows }: { rows: ProductRow[] }) {
                     {r.name}
                   </p>
                   <div className="mt-1 flex items-center gap-2 font-sans text-xs text-cool-gray">
-                    {r.fromResale != null && (
+                    {r.fromPrice != null && (
                       <span>
                         {r.variantCount > 1 ? "a partir de " : ""}
-                        {brl(r.fromResale)}
+                        {brl(r.fromPrice)}
                       </span>
                     )}
                     {r.variantCount > 0 && (

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import ImageGallery from "@/components/produtos/ImageGallery";
 import VariantSelector from "@/components/produtos/VariantSelector";
 import WhatsAppProductButton from "@/components/produtos/WhatsAppProductButton";
+import { effectiveStock } from "@/lib/product-stock";
 import AddToCartButton from "@/components/produtos/AddToCartButton";
 import BuyNowButton from "@/components/produtos/BuyNowButton";
 
@@ -83,8 +84,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const hasVariants = product.variants.length > 0;
 
-  // Schema.org structured data — ajuda o Google a entender que é um produto
-  const isOutOfStock = product.stock === 0;
+  // Schema.org structured data — ajuda o Google a entender que é um produto.
+  // Esgotado = estoque EFETIVO zerado (soma das variações quando existem);
+  // antes usava só product.stock e marcava variantados como OutOfStock.
+  const isOutOfStock =
+    effectiveStock(product.stock, product.variants) === 0;
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Product",

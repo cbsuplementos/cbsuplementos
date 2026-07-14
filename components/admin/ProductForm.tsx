@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Input,
@@ -25,14 +26,11 @@ interface ProductFormProps {
     name: string;
     description: string;
     price: string;
+    costPrice: string;
     mainImage: string;
     categoryId: string;
     stock: number | null;
     badge: string;
-    weight: number;
-    height: number;
-    width: number;
-    length: number;
     active: boolean;
     featured: boolean;
     images: { url: string; order: number }[];
@@ -44,12 +42,20 @@ interface ProductFormProps {
  * Formulário de Produto — usado tanto para criar quanto editar
  *
  * Gerencia:
- * - Imagem principal (obrigatória)
- * - Galeria de imagens (0+, opcional)
- * - Dados textuais (nome, descrição, preço)
- * - Categoria (dropdown)
- * - Flags (ativo, destaque)
- * - Estoque
+ * - Imagem principal (obrigatória) e galeria
+ * - Dados textuais (nome, descrição)
+ * - Preço de venda e custo
+ * - Categoria, badge e flags (ativo, destaque)
+ * - Variações (sabores, tamanhos, apresentações)
+ *
+ * ESTOQUE: no cadastro é possível definir o estoque inicial (gera registro
+ * de inventário). Na EDIÇÃO o estoque é somente leitura — mudanças passam
+ * pelo app de Gestão (/gestao), que registra cada movimentação. Editar
+ * estoque por formulário criaria mudanças sem rastro no histórico.
+ *
+ * A antiga seção "Dimensões e Peso (para frete)" foi ocultada: a entrega é
+ * por motoboy com taxa fixa por cidade, então nenhum cálculo usa esses
+ * campos. Os valores existentes no banco são preservados.
  */
 export default function ProductForm({ categories, product }: ProductFormProps) {
   const router = useRouter();
@@ -65,6 +71,8 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
   const [variants, setVariants] = useState<VariantData[]>(
     product?.variants ?? []
   );
+
+  const hasVariants = variants.length > 0;
 
   function addGallerySlot() {
     setGalleryImages([...galleryImages, ""]);
@@ -93,7 +101,8 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
       .filter((url) => url.trim() !== "")
       .forEach((url) => formData.append("galleryImages", url));
 
-    // Serializa variantes como JSON
+    // Serializa variações como JSON (inclui id para sincronização segura
+    // no servidor — variações existentes são ATUALIZADAS, não recriadas)
     formData.delete("variants");
     formData.set("variants", JSON.stringify(variants));
 
@@ -149,27 +158,29 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
           required
           rows={5}
           defaultValue={product?.description ?? ""}
-          placeholder="Descreva o produto: tecido, caimento, ocasiões de uso..."
+          placeholder="Descreva o produto: sabor, tamanho, benefícios, modo de uso..."
         />
 
         <div className="grid lg:grid-cols-3 gap-6">
           <Input
-            label="Preço (R$)"
+            label="Preço de venda (R$)"
             name="price"
             type="text"
             inputMode="decimal"
             required
             defaultValue={product?.price ?? ""}
             placeholder="Ex: 289,90"
-            hint="Use vírgula ou ponto como separador decimal."
+            hint="Cobrado no site e exibido no app de Gestão. Vírgula ou ponto."
           />
 
           <Input
-            label="Estoque (opcional)"
-            name="stock"
-            type="number"
-            min={0}
-            defaultValue={product?.stock ?? 0}
+            label="Custo (R$)"
+            name="costPrice"
+            type="text"
+            inputMode="decimal"
+            defaultValue={product?.costPrice ?? ""}
+            placeholder="Ex: 155,00"
+            hint="Quanto você paga no fornecedor (opcional)."
           />
 
           <Select
@@ -186,6 +197,47 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
           />
         </div>
 
+        {/* ===== ESTOQUE ===== */}
+        {isEditing ? (
+          !hasVariants && (
+            <div className="rounded-lg bg-neutral-50 border border-noir/10 px-4 py-3">
+              <p className="text-sm text-noir/70">
+                Estoque atual:{" "}
+                <span className="font-semibold text-noir">
+                  {product?.stock ?? "sem controle"}
+                </span>
+                <span className="text-neutral-400">
+                  {" "}— ajuste pelo{" "}
+                  <Link href="/gestao" className="underline text-gold-dark hover:text-gold" target="_blank">
+                    app de Gestão
+                  </Link>
+                  , que registra cada movimentação no histórico.
+                </span>
+              </p>
+            </div>
+          )
+        ) : (
+          !hasVariants && (
+            <div className="grid lg:grid-cols-3 gap-6">
+              <Input
+                label="Estoque inicial (opcional)"
+                name="stock"
+                type="number"
+                min={0}
+                defaultValue=""
+                placeholder="Ex: 12"
+                hint="Vazio = sem controle de estoque (o site vende sem limite). Preenchido, gera registro de inventário inicial."
+              />
+            </div>
+          )
+        )}
+        {hasVariants && (
+          <p className="text-xs text-neutral-500">
+            Este produto tem variações — preço, custo e estoque são definidos
+            por variação, na seção abaixo.
+          </p>
+        )}
+
         <div className="space-y-3 pt-2">
           <Checkbox
             label="Produto ativo"
@@ -198,52 +250,6 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
             description="Produtos em destaque aparecem na seção principal da Home."
             name="featured"
             defaultChecked={product?.featured ?? false}
-          />
-        </div>
-      </section>
-
-      {/* ============ SEÇÃO: DIMENSÕES E PESO ============ */}
-      <section className="space-y-4">
-        <h2 className="font-display text-xl text-noir border-b border-noir/10 pb-2">
-          📦 Dimensões e Peso (para frete)
-        </h2>
-        <p className="text-sm text-neutral-500">
-          Informe o peso e dimensões da embalagem deste produto.
-          Deixe <strong>0</strong> para usar os valores padrão da categoria.
-        </p>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Input
-            label="Peso (g)"
-            name="weight"
-            type="number"
-            min={0}
-            defaultValue={product?.weight ?? 0}
-            hint="Em gramas (0 = herda da categoria)"
-          />
-          <Input
-            label="Altura (cm)"
-            name="height"
-            type="number"
-            min={0}
-            defaultValue={product?.height ?? 0}
-            hint="Em cm (0 = herda)"
-          />
-          <Input
-            label="Largura (cm)"
-            name="width"
-            type="number"
-            min={0}
-            defaultValue={product?.width ?? 0}
-            hint="Em cm (0 = herda)"
-          />
-          <Input
-            label="Comprimento (cm)"
-            name="length"
-            type="number"
-            min={0}
-            defaultValue={product?.length ?? 0}
-            hint="Em cm (0 = herda)"
           />
         </div>
       </section>
@@ -298,17 +304,21 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
         </button>
       </section>
 
-      {/* ============ SEÇÃO: VARIANTES ============ */}
+      {/* ============ SEÇÃO: VARIAÇÕES ============ */}
       <section className="space-y-4">
         <h2 className="font-display text-xl text-noir border-b border-noir/10 pb-2">
-          Variantes (opcional)
+          Variações (opcional)
         </h2>
         <p className="text-sm text-neutral-500">
-          Adicione variações como tamanho, cor ou modelo. Cada variante pode ter
-          seu próprio preço e estoque.
+          Adicione variações como sabor, tamanho do pote ou apresentação.
+          Cada variação tem seu próprio preço, custo e estoque.
         </p>
 
-        <VariantForm variants={variants} onChange={setVariants} />
+        <VariantForm
+          variants={variants}
+          onChange={setVariants}
+          productEditing={isEditing}
+        />
       </section>
 
       {/* ============ ERRO ============ */}

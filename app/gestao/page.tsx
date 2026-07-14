@@ -14,10 +14,9 @@ export default async function GestaoHome() {
       stock: true,
       active: true,
       price: true,
-      resalePrice: true,
       brand: { select: { name: true } },
       variants: {
-        select: { id: true, stock: true, resalePrice: true, price: true },
+        select: { id: true, stock: true, price: true },
       },
     },
   });
@@ -28,11 +27,13 @@ export default async function GestaoHome() {
       ? p.variants.reduce((sum, v) => sum + v.stock, 0)
       : p.stock ?? 0;
 
-    // preço de revenda "a partir de" (menor entre as variantes / produto)
-    const resaleCandidates = hasVariants
-      ? p.variants.map((v) => Number(v.resalePrice ?? v.price))
-      : [Number(p.resalePrice ?? p.price)];
-    const fromResale = Math.min(...resaleCandidates.filter((n) => !Number.isNaN(n)));
+    // preço de venda "a partir de" (menor entre as variações / produto).
+    // Fonte única: `price` — é o que o site cobra (revenda == preço do site,
+    // decisão de 02/07; `resalePrice` virou espelho legado).
+    const priceCandidates = hasVariants
+      ? p.variants.map((v) => Number(v.price))
+      : [Number(p.price)];
+    const fromPrice = Math.min(...priceCandidates.filter((n) => !Number.isNaN(n)));
 
     return {
       id: p.id,
@@ -42,7 +43,7 @@ export default async function GestaoHome() {
       active: p.active,
       totalStock,
       variantCount: p.variants.length,
-      fromResale: Number.isFinite(fromResale) ? fromResale : null,
+      fromPrice: Number.isFinite(fromPrice) ? fromPrice : null,
     };
   });
 

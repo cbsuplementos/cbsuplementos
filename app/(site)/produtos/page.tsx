@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { Suspense } from "react";
 import ProductCard from "@/components/produtos/ProductCard";
 import CategoryFilter from "@/components/produtos/CategoryFilter";
+import { effectiveStock } from "@/lib/product-stock";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,12 @@ export default async function ProdutosPage({ searchParams }: PageProps) {
       category: {
         select: { name: true },
       },
+      // Estoque efetivo: produto com variações usa a soma delas (regra
+      // única em lib/product-stock — corrige "Esgotado" indevido).
+      variants: {
+        where: { active: true },
+        select: { stock: true },
+      },
     },
   });
 
@@ -112,7 +119,7 @@ export default async function ProdutosPage({ searchParams }: PageProps) {
                   name: product.name,
                   price: product.price.toString(),
                   mainImage: product.mainImage,
-                  stock: product.stock,
+                  stock: effectiveStock(product.stock, product.variants),
                   badge: product.badge,
                   category: product.category,
                 }}

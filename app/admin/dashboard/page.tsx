@@ -85,6 +85,11 @@ export default async function DashboardPage() {
         <h2 className="font-display text-2xl text-noir mb-6">Ações Rápidas</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ActionCard
+            title="Gerenciar Pedidos"
+            description="Acompanhar pagamentos, preparar e despachar entregas"
+            href="/admin/pedidos"
+          />
+          <ActionCard
             title="Gerenciar Produtos"
             description="Adicionar, editar ou desativar produtos da vitrine"
             href="/admin/produtos"
@@ -94,19 +99,12 @@ export default async function DashboardPage() {
             description="Organizar as categorias da loja"
             href="/admin/categorias"
           />
+          <ActionCard
+            title="Gestão de Estoque (celular)"
+            description="Vendas de balcão, entradas e ajustes com histórico — /gestao"
+            href="/gestao"
+          />
         </div>
-      </section>
-
-      {/* ============ AVISO TEMPORÁRIO ============ */}
-      <section className="mt-12 p-6 bg-gold/5 border border-gold/20">
-        <h3 className="font-display text-lg text-noir mb-2">
-          🚧 Funcionalidades em construção
-        </h3>
-        <p className="text-sm text-neutral-500 leading-relaxed">
-          O CRUD completo de produtos e categorias está sendo desenvolvido.
-          Por enquanto, você pode visualizar as estatísticas e navegar pelo
-          painel.
-        </p>
       </section>
     </div>
   );

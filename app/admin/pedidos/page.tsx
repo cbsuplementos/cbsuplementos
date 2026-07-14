@@ -8,7 +8,7 @@ const statusLabels: Record<string, { label: string; color: string }> = {
   PENDING: { label: "Aguardando pagamento", color: "bg-yellow-100 text-yellow-800" },
   PAYMENT_APPROVED: { label: "Pago", color: "bg-green-100 text-green-800" },
   PROCESSING: { label: "Em preparação", color: "bg-blue-100 text-blue-800" },
-  SHIPPED: { label: "Enviado", color: "bg-purple-100 text-purple-800" },
+  SHIPPED: { label: "Saiu para entrega", color: "bg-purple-100 text-purple-800" },
   DELIVERED: { label: "Entregue", color: "bg-emerald-100 text-emerald-800" },
   CANCELLED: { label: "Cancelado", color: "bg-red-100 text-red-800" },
   REFUNDED: { label: "Reembolsado", color: "bg-neutral-100 text-neutral-800" },

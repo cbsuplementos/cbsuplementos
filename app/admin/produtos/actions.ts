@@ -41,31 +41,41 @@ async function generateUniqueSlug(name: string, excludeId?: string): Promise<str
 /**
  * Helper: extrai dados do FormData
  */
+/** "155,00" → 155.0 · vazio/inválido → null */
+function parseMoney(raw: string | null | undefined): number | null {
+  const cleaned = (raw ?? "").trim().replace(",", ".");
+  if (cleaned === "") return null;
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
 function parseProductForm(formData: FormData) {
   const name = (formData.get("name") as string)?.trim();
   const description = (formData.get("description") as string)?.trim();
-  const priceStr = (formData.get("price") as string)?.replace(",", ".");
-  const price = parseFloat(priceStr);
+  const price = parseMoney(formData.get("price") as string) ?? NaN;
+  const costPrice = parseMoney(formData.get("costPrice") as string);
   const mainImage = (formData.get("mainImage") as string)?.trim();
   const categoryId = (formData.get("categoryId") as string)?.trim();
-  const stock = parseInt((formData.get("stock") as string) || "0", 10);
+  // Estoque inicial (só usado no CADASTRO):
+  //   vazio  → null = sem controle de estoque (o site vende sem limite)
+  //   número → estoque inicial, com registro de inventário no histórico
+  const stockRaw = ((formData.get("stock") as string) ?? "").trim();
+  const stock =
+    stockRaw === "" ? null : Math.max(0, parseInt(stockRaw, 10) || 0);
   const badge = (formData.get("badge") as string) || "NONE";
-  const weight = parseInt((formData.get("weight") as string) || "0", 10);
-  const height = parseInt((formData.get("height") as string) || "0", 10);
-  const width = parseInt((formData.get("width") as string) || "0", 10);
-  const length = parseInt((formData.get("length") as string) || "0", 10);
   const active = formData.get("active") === "on";
   const featured = formData.get("featured") === "on";
 
   // Imagens da galeria (múltiplos valores)
   const galleryImages = formData.getAll("galleryImages") as string[];
 
-  // Variantes (JSON serializado)
+  // Variações (JSON serializado; id presente = variação já existente)
   const variantsRaw = formData.get("variants") as string;
   let variants: {
     id?: string;
     name: string;
     price: string;
+    costPrice?: string;
     stock: number;
     sku: string;
     active: boolean;
@@ -80,14 +90,11 @@ function parseProductForm(formData: FormData) {
     name,
     description,
     price,
+    costPrice,
     mainImage,
     categoryId,
     stock,
     badge,
-    weight,
-    height,
-    width,
-    length,
     active,
     featured,
     galleryImages: galleryImages.filter((url) => url.trim() !== ""),
@@ -112,21 +119,12 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
 
   try {
     const slug = await generateUniqueSlug(data.name);
+    const session = await auth();
+    const userId = (session?.user as { id?: string } | undefined)?.id ?? null;
 
-    // Se dimensões forem 0, herdar da categoria
-    let { weight, height, width, length } = data;
-    if (weight === 0 || height === 0 || width === 0 || length === 0) {
-      const category = await prisma.category.findUnique({
-        where: { id: data.categoryId },
-        select: { defaultWeight: true, defaultHeight: true, defaultWidth: true, defaultLength: true },
-      });
-      if (category) {
-        if (weight === 0) weight = category.defaultWeight;
-        if (height === 0) height = category.defaultHeight;
-        if (width === 0) width = category.defaultWidth;
-        if (length === 0) length = category.defaultLength;
-      }
-    }
+    // Com variações, o estoque vive nelas — o campo do produto fica nulo.
+    const hasVariants = data.variants.length > 0;
+    const productStock = hasVariants ? null : data.stock;
 
     const product = await prisma.product.create({
       data: {
@@ -134,14 +132,14 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
         slug,
         description: data.description,
         price: data.price,
+        costPrice: data.costPrice,
+        // Preço de venda unificado: `resalePrice` é mantido como espelho de
+        // `price` (decisão 02/07 — são a mesma coisa).
+        resalePrice: data.price,
         mainImage: data.mainImage,
         categoryId: data.categoryId,
-        stock: data.stock,
+        stock: productStock,
         badge: data.badge as "NONE" | "MAIS_VENDIDO" | "NOVIDADE" | "PROMOCAO" | "EXCLUSIVO",
-        weight,
-        height,
-        width,
-        length,
         active: data.active,
         featured: data.featured,
         // Cria as imagens da galeria
@@ -152,24 +150,66 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
             order: index,
           })),
         },
-        // Cria as variantes
+        // Cria as variações (estoque inicial permitido só no cadastro)
         variants: {
-          create: data.variants.map((v) => ({
-            name: v.name,
-            price: parseFloat(v.price.replace(",", ".")) || data.price,
-            stock: v.stock || 0,
-            sku: v.sku || null,
-            active: v.active,
-          })),
+          create: data.variants.map((v) => {
+            const vPrice = parseMoney(v.price) ?? data.price;
+            return {
+              name: v.name,
+              price: vPrice,
+              costPrice: parseMoney(v.costPrice),
+              resalePrice: vPrice,
+              stock: v.stock || 0,
+              sku: v.sku || null,
+              active: v.active,
+            };
+          }),
         },
       },
+      include: { variants: { select: { id: true, stock: true } } },
     });
+
+    // Estoque inicial vira INVENTARIO_INICIAL no histórico — assim o app de
+    // Gestão enxerga de onde o número veio, desde o primeiro dia.
+    const initialMovements = hasVariants
+      ? product.variants
+          .filter((v) => v.stock > 0)
+          .map((v) => ({
+            type: "INVENTARIO_INICIAL" as const,
+            quantity: v.stock,
+            stockBefore: 0,
+            stockAfter: v.stock,
+            reason: "Cadastro do produto (admin)",
+            productId: product.id,
+            variantId: v.id,
+            userId,
+          }))
+      : productStock && productStock > 0
+        ? [
+            {
+              type: "INVENTARIO_INICIAL" as const,
+              quantity: productStock,
+              stockBefore: 0,
+              stockAfter: productStock,
+              reason: "Cadastro do produto (admin)",
+              productId: product.id,
+              variantId: null,
+              userId,
+            },
+          ]
+        : [];
+    if (initialMovements.length > 0) {
+      await prisma.stockMovement.createMany({ data: initialMovements });
+    }
 
     revalidatePath("/admin/produtos");
     revalidatePath("/");
     return { success: true, id: product.id };
   } catch (error) {
     console.error("Erro ao criar produto:", error);
+    if ((error as { code?: string })?.code === "P2002") {
+      return { error: "SKU duplicado: cada variação precisa de um SKU único (ou deixe em branco)." };
+    }
     return { error: "Erro ao criar produto" };
   }
 }
@@ -194,26 +234,53 @@ export async function updateProduct(
   try {
     const slug = await generateUniqueSlug(data.name, id);
 
-    // Se dimensões forem 0, herdar da categoria
-    let { weight, height, width, length } = data;
-    if (weight === 0 || height === 0 || width === 0 || length === 0) {
-      const category = await prisma.category.findUnique({
-        where: { id: data.categoryId },
-        select: { defaultWeight: true, defaultHeight: true, defaultWidth: true, defaultLength: true },
-      });
-      if (category) {
-        if (weight === 0) weight = category.defaultWeight;
-        if (height === 0) height = category.defaultHeight;
-        if (width === 0) width = category.defaultWidth;
-        if (length === 0) length = category.defaultLength;
-      }
+    // ============================================================
+    // SINCRONIZAÇÃO DE VARIAÇÕES POR ID (nunca "apagar e recriar")
+    // ------------------------------------------------------------
+    // A estratégia antiga (deleteMany + create) tinha efeitos graves:
+    //  - apagava costPrice/resalePrice das variações a cada salvamento;
+    //  - deixava o histórico de estoque órfão (variantId → null);
+    //  - trocava os IDs, invalidando carrinhos de clientes e a tela do
+    //    /gestao aberta no celular;
+    //  - sobrescrevia o estoque com o valor carregado no formulário
+    //    (desfazia vendas concorrentes).
+    // Agora: existentes são ATUALIZADAS, novas são CRIADAS (estoque 0) e
+    // só as removidas no formulário são EXCLUÍDAS — e apenas se estiverem
+    // com estoque zerado. Estoque e IDs são preservados.
+    // ============================================================
+    const existing = await prisma.variant.findMany({
+      where: { productId: id },
+      select: { id: true, name: true, stock: true },
+    });
+    const existingIds = new Set(existing.map((v) => v.id));
+
+    const submitted = data.variants.map((v) => ({
+      ...v,
+      // id desconhecido (ex.: variação excluída por outra pessoa enquanto o
+      // formulário estava aberto) é tratado como variação nova
+      id: v.id && existingIds.has(v.id) ? v.id : undefined,
+    }));
+    const submittedIds = new Set(
+      submitted.filter((v) => v.id).map((v) => v.id as string)
+    );
+
+    const toDelete = existing.filter((v) => !submittedIds.has(v.id));
+    const blocked = toDelete.filter((v) => v.stock !== 0);
+    if (blocked.length > 0) {
+      return {
+        error:
+          `Não dá para remover variação com estoque: ` +
+          blocked.map((v) => `"${v.name}" (${v.stock} un.)`).join(", ") +
+          `. Zere o estoque pelo app de Gestão (registrando a saída) e salve de novo.`,
+      };
     }
 
-    // Estratégia para galeria e variantes: deletar todas e recriar
-    // (mais simples que sincronizar — performance OK para poucos itens)
+    const toUpdate = submitted.filter((v) => v.id);
+    const toCreate = submitted.filter((v) => !v.id);
+
     await prisma.$transaction([
+      // Galeria: recriar é seguro (nenhuma outra tabela referencia imagens)
       prisma.productImage.deleteMany({ where: { productId: id } }),
-      prisma.variant.deleteMany({ where: { productId: id } }),
       prisma.product.update({
         where: { id },
         data: {
@@ -221,14 +288,14 @@ export async function updateProduct(
           slug,
           description: data.description,
           price: data.price,
+          costPrice: data.costPrice,
+          resalePrice: data.price, // espelho — preço de venda unificado
           mainImage: data.mainImage,
           categoryId: data.categoryId,
-          stock: data.stock,
+          // stock NÃO é tocado aqui: mudanças de estoque passam pelo app de
+          // Gestão, que registra a movimentação. Dimensões (peso/altura/etc.)
+          // também ficam como estão — o frete é taxa fixa e não as usa.
           badge: data.badge as "NONE" | "MAIS_VENDIDO" | "NOVIDADE" | "PROMOCAO" | "EXCLUSIVO",
-          weight,
-          height,
-          width,
-          length,
           active: data.active,
           featured: data.featured,
           images: {
@@ -238,16 +305,40 @@ export async function updateProduct(
               order: index,
             })),
           },
-          variants: {
-            create: data.variants.map((v) => ({
-              name: v.name,
-              price: parseFloat(v.price.replace(",", ".")) || data.price,
-              stock: v.stock || 0,
-              sku: v.sku || null,
-              active: v.active,
-            })),
-          },
         },
+      }),
+      ...toDelete.map((v) =>
+        prisma.variant.delete({ where: { id: v.id } })
+      ),
+      ...toUpdate.map((v) => {
+        const vPrice = parseMoney(v.price) ?? data.price;
+        return prisma.variant.update({
+          where: { id: v.id as string },
+          data: {
+            name: v.name,
+            price: vPrice,
+            costPrice: parseMoney(v.costPrice),
+            resalePrice: vPrice,
+            sku: v.sku || null,
+            active: v.active,
+            // stock preservado — só muda por movimentação registrada
+          },
+        });
+      }),
+      ...toCreate.map((v) => {
+        const vPrice = parseMoney(v.price) ?? data.price;
+        return prisma.variant.create({
+          data: {
+            productId: id,
+            name: v.name,
+            price: vPrice,
+            costPrice: parseMoney(v.costPrice),
+            resalePrice: vPrice,
+            sku: v.sku || null,
+            active: v.active,
+            stock: 0, // nova variação nasce zerada; entrada pelo /gestao
+          },
+        });
       }),
     ]);
 
@@ -257,6 +348,9 @@ export async function updateProduct(
     return { success: true };
   } catch (error) {
     console.error("Erro ao atualizar produto:", error);
+    if ((error as { code?: string })?.code === "P2002") {
+      return { error: "SKU duplicado: cada variação precisa de um SKU único (ou deixe em branco)." };
+    }
     return { error: "Erro ao atualizar produto" };
   }
 }

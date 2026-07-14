@@ -25,7 +25,6 @@ export default async function ProdutoDetalhe({
       active: true,
       price: true,
       costPrice: true,
-      resalePrice: true,
       brand: { select: { name: true } },
       category: { select: { name: true } },
       variants: {
@@ -36,7 +35,6 @@ export default async function ProdutoDetalhe({
           stock: true,
           price: true,
           costPrice: true,
-          resalePrice: true,
           attributes: true,
         },
       },
@@ -56,7 +54,7 @@ export default async function ProdutoDetalhe({
         name: v.name,
         stock: v.stock,
         cost: v.costPrice != null ? Number(v.costPrice) : null,
-        resale: v.resalePrice != null ? Number(v.resalePrice) : Number(v.price),
+        resale: Number(v.price), // preço de venda unificado (== site)
       }))
     : [
         {
@@ -64,7 +62,7 @@ export default async function ProdutoDetalhe({
           name: "Produto",
           stock: product.stock ?? 0,
           cost: product.costPrice != null ? Number(product.costPrice) : null,
-          resale: product.resalePrice != null ? Number(product.resalePrice) : Number(product.price),
+          resale: Number(product.price), // preço de venda unificado (== site)
         },
       ];
 

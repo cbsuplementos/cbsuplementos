@@ -8,7 +8,7 @@ const statusLabels: Record<string, string> = {
   PENDING: "Aguardando pagamento",
   PAYMENT_APPROVED: "Pago",
   PROCESSING: "Em preparação",
-  SHIPPED: "Enviado",
+  SHIPPED: "Saiu para entrega",
   DELIVERED: "Entregue",
   CANCELLED: "Cancelado",
   REFUNDED: "Reembolsado",

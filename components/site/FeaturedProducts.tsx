@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import ProductCard from "./ProductCard";
+import { effectiveStock } from "@/lib/product-stock";
 
 export default async function FeaturedProducts() {
   let products = await prisma.product.findMany({
     where: { active: true, featured: true },
     take: 4,
     orderBy: { createdAt: "desc" },
-    include: { category: { select: { name: true } } },
+    include: {
+      category: { select: { name: true } },
+      variants: { where: { active: true }, select: { stock: true } },
+    },
   });
 
   if (products.length === 0) {
@@ -15,7 +19,10 @@ export default async function FeaturedProducts() {
       where: { active: true },
       take: 4,
       orderBy: { createdAt: "desc" },
-      include: { category: { select: { name: true } } },
+      include: {
+      category: { select: { name: true } },
+      variants: { where: { active: true }, select: { stock: true } },
+    },
     });
   }
 
@@ -53,7 +60,7 @@ export default async function FeaturedProducts() {
                 slug: product.slug,
                 price: product.price.toString(),
                 mainImage: product.mainImage,
-                stock: product.stock,
+                stock: effectiveStock(product.stock, product.variants),
                 badge: product.badge,
                 category: product.category,
               }}
