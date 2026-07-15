@@ -1,26 +1,50 @@
 import Link from "next/link";
-import Image from "next/image";
 import { prisma } from "@/lib/db";
 import { PageHeader, Button } from "@/components/admin/FormFields";
-import ProductActions from "@/components/admin/ProductActions";
 import { formatPrice } from "@/lib/utils";
 import { effectiveStock, startingPrice } from "@/lib/product-stock";
+import ProductsTable, {
+  type TableRow,
+  type HeaderDef,
+} from "@/components/admin/ProductsTable";
+import Pagination from "@/components/admin/Pagination";
 
 export const dynamic = "force-dynamic";
 
 /**
- * /admin/produtos
+ * /admin/produtos (E5 + QW7)
  *
- * Lista todos os produtos com filtros server-side (busca, categoria,
- * status, badge, estoque). Mesmo padrão da tela de Pedidos: estado do
- * filtro vive na URL (querystring), via <form method="GET"> sem JS.
+ * Filtros, ordenação e página vivem na URL (querystring):
+ *  - filtros: form GET (sem JS), como na tela de Pedidos;
+ *  - ordenação: cabeçalhos clicáveis (?ordem=&dir=);
+ *  - paginação: 25 por página (?pagina=).
+ *
+ * A ordenação e o corte da página acontecem EM MEMÓRIA de propósito:
+ * "Estoque" e "Preço (a partir de)" são calculados a partir das
+ * variações (lib/product-stock) e não existem como coluna no banco —
+ * ordenar via SQL mostraria uma ordem diferente da que o usuário vê.
+ * Com o catálogo atual (~320 produtos) o custo é irrelevante; se um
+ * dia passar de alguns milhares, migrar para colunas materializadas.
  */
+
+const PER_PAGE = 25;
 
 const badgeLabels: Record<string, string> = {
   MAIS_VENDIDO: "Mais Vendido",
   NOVIDADE: "Novidade",
   PROMOCAO: "Promoção",
   EXCLUSIVO: "Exclusivo",
+};
+
+// Campos ordenáveis e a direção padrão do primeiro clique
+const SORTABLE: Record<string, "asc" | "desc"> = {
+  nome: "asc",
+  categoria: "asc",
+  marca: "asc",
+  preco: "asc",
+  estoque: "asc",
+  status: "asc",
+  criado: "desc",
 };
 
 interface PageProps {
@@ -30,7 +54,10 @@ interface PageProps {
     status?: string;   // "ativo" | "inativo"
     badge?: string;    // enum ProductBadge
     estoque?: string;  // "baixo" (1-5) | "esgotado" (0)
-    marca?: string;    // ID da marca
+    marca?: string;    // ID da marca | "sem-marca"
+    ordem?: string;    // campo de ordenação
+    dir?: string;      // "asc" | "desc"
+    pagina?: string;   // página (1-based)
   }>;
 }
 
@@ -42,6 +69,12 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   const badge = params.badge || "";
   const estoque = params.estoque || "";
   const marca = params.marca || "";
+  const ordem = params.ordem && SORTABLE[params.ordem] ? params.ordem : "criado";
+  const dir: "asc" | "desc" =
+    params.dir === "asc" || params.dir === "desc"
+      ? params.dir
+      : SORTABLE[ordem];
+  const paginaRaw = parseInt(params.pagina ?? "1", 10);
 
   // Monta o where do Prisma incrementalmente
   const where: Record<string, unknown> = {};
@@ -63,7 +96,6 @@ export default async function ProductsPage({ searchParams }: PageProps) {
 
   const hasFilters = !!(q || categoria || status || badge || estoque || marca);
 
-  // Busca produtos filtrados, categorias (para o select) e total — em paralelo
   const [products, categories, brands, allCount] = await Promise.all([
     prisma.product.findMany({
       where,
@@ -86,19 +118,143 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   ]);
 
   // Estoque efetivo + menor preço (regra única de lib/product-stock)
-  const rows = products
-    .map((product) => ({
-      product,
-      stock: effectiveStock(product.stock, product.variants),
-      fromPrice: startingPrice(product.price, product.variants),
-      variantCount: product.variants.length,
-    }))
+  const computed = products
+    .map((product) => {
+      const stock = effectiveStock(product.stock, product.variants);
+      const fromPrice = startingPrice(product.price, product.variants);
+      return {
+        product,
+        stock,
+        fromPrice,
+        variantCount: product.variants.length,
+        // chaves de ordenação pré-calculadas
+        sortName: product.name,
+        sortCategory: product.category.name,
+        sortBrand: product.brand?.name ?? null,
+        sortPrice: fromPrice != null ? Number(fromPrice) : Number(product.price),
+        sortStock: stock,
+        sortActive: product.active ? 1 : 0,
+        sortCreated: product.createdAt.getTime(),
+      };
+    })
     .filter((r) => {
       if (estoque === "esgotado") return r.stock === 0;
       if (estoque === "baixo")
         return r.stock !== null && r.stock > 0 && r.stock <= 5;
       return true;
     });
+
+  // ====== ORDENAÇÃO ======
+  const dirMul = dir === "desc" ? -1 : 1;
+  computed.sort((a, b) => {
+    // nulos sempre no fim, independente da direção
+    if (ordem === "marca") {
+      if (a.sortBrand === null && b.sortBrand !== null) return 1;
+      if (b.sortBrand === null && a.sortBrand !== null) return -1;
+    }
+    if (ordem === "estoque") {
+      if (a.sortStock === null && b.sortStock !== null) return 1;
+      if (b.sortStock === null && a.sortStock !== null) return -1;
+    }
+
+    let cmp = 0;
+    switch (ordem) {
+      case "nome":
+        cmp = a.sortName.localeCompare(b.sortName, "pt-BR", { sensitivity: "base" });
+        break;
+      case "categoria":
+        cmp = a.sortCategory.localeCompare(b.sortCategory, "pt-BR", { sensitivity: "base" });
+        break;
+      case "marca":
+        cmp = (a.sortBrand ?? "").localeCompare(b.sortBrand ?? "", "pt-BR", { sensitivity: "base" });
+        break;
+      case "preco":
+        cmp = a.sortPrice - b.sortPrice;
+        break;
+      case "estoque":
+        cmp = (a.sortStock ?? 0) - (b.sortStock ?? 0);
+        break;
+      case "status":
+        cmp = a.sortActive - b.sortActive;
+        break;
+      default:
+        cmp = a.sortCreated - b.sortCreated;
+    }
+    // desempate estável por nome
+    if (cmp === 0)
+      cmp = a.sortName.localeCompare(b.sortName, "pt-BR", { sensitivity: "base" });
+    return dirMul * cmp;
+  });
+
+  // ====== PAGINAÇÃO ======
+  const totalFiltered = computed.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PER_PAGE));
+  const page = Math.min(Math.max(1, Number.isFinite(paginaRaw) ? paginaRaw : 1), totalPages);
+  const pageRows = computed.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const allFilteredIds = computed.map((r) => r.product.id);
+
+  // ====== QUERYSTRING (preserva filtros/ordem entre links) ======
+  const baseParams: Record<string, string> = {};
+  if (q) baseParams.q = q;
+  if (categoria) baseParams.categoria = categoria;
+  if (status) baseParams.status = status;
+  if (badge) baseParams.badge = badge;
+  if (estoque) baseParams.estoque = estoque;
+  if (marca) baseParams.marca = marca;
+  baseParams.ordem = ordem;
+  baseParams.dir = dir;
+
+  const qs = (overrides: Record<string, string | null>) => {
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries({ ...baseParams, ...overrides })) {
+      if (v !== null && v !== "") sp.set(k, v);
+    }
+    const str = sp.toString();
+    return str ? `/admin/produtos?${str}` : "/admin/produtos";
+  };
+
+  // ====== CABEÇALHOS ORDENÁVEIS ======
+  const columns: { key: string; label: string; sortable: boolean }[] = [
+    { key: "nome", label: "Produto", sortable: true },
+    { key: "categoria", label: "Categoria", sortable: true },
+    { key: "marca", label: "Marca", sortable: true },
+    { key: "preco", label: "Preço", sortable: true },
+    { key: "estoque", label: "Estoque", sortable: true },
+    { key: "badge", label: "Badge", sortable: false },
+    { key: "status", label: "Status", sortable: true },
+    { key: "acoes", label: "Ações", sortable: false },
+  ];
+  const headers: HeaderDef[] = columns.map((c) => {
+    if (!c.sortable) return { key: c.key, label: c.label, href: "", sorted: null };
+    const isActive = ordem === c.key;
+    const nextDir = isActive ? (dir === "asc" ? "desc" : "asc") : SORTABLE[c.key];
+    return {
+      key: c.key,
+      label: c.label,
+      href: qs({ ordem: c.key, dir: nextDir, pagina: null }),
+      sorted: isActive ? dir : null,
+    };
+  });
+
+  // ====== LINHAS SERIALIZADAS PARA O CLIENT ======
+  const tableRows: TableRow[] = pageRows.map((r) => ({
+    id: r.product.id,
+    name: r.product.name,
+    slug: r.product.slug,
+    mainImage: r.product.mainImage,
+    categoryName: r.product.category.name,
+    brandName: r.product.brand?.name ?? null,
+    priceLabel:
+      r.fromPrice != null
+        ? formatPrice(String(r.fromPrice))
+        : formatPrice(r.product.price.toString()),
+    hasVariants: r.variantCount > 0,
+    variantCount: r.variantCount,
+    stock: r.stock,
+    badge: r.product.badge,
+    active: r.product.active,
+    featured: r.product.featured,
+  }));
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -115,6 +271,9 @@ export default async function ProductsPage({ searchParams }: PageProps) {
       {/* ====== FILTROS ====== */}
       <div className="bg-white p-4 rounded-xl border border-neutral-200 mb-6">
         <form method="GET" className="flex flex-wrap gap-3 items-end">
+          {/* preserva a ordenação atual ao filtrar (a página volta pra 1) */}
+          <input type="hidden" name="ordem" value={ordem} />
+          <input type="hidden" name="dir" value={dir} />
           <div className="flex-1 min-w-[200px]">
             <label className="block text-xs font-medium text-neutral-600 mb-1">Buscar</label>
             <input
@@ -185,7 +344,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
         </form>
       </div>
 
-      {rows.length === 0 ? (
+      {tableRows.length === 0 ? (
         hasFilters ? (
           <div className="bg-white border border-neutral-200 p-12 text-center rounded-xl">
             <p className="font-display text-2xl text-noir mb-2">Nenhum produto encontrado</p>
@@ -198,147 +357,29 @@ export default async function ProductsPage({ searchParams }: PageProps) {
           <EmptyState />
         )
       ) : (
-        <div className="bg-white border border-neutral-200 overflow-hidden">
-          <div className="px-4 py-3 border-b border-neutral-200">
-            <p className="text-sm text-neutral-600">
-              Mostrando {rows.length} de {allCount} produtos
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
-              <thead className="bg-noir text-white">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-widest font-medium">
-                    Produto
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-widest font-medium">
-                    Categoria
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-widest font-medium">
-                    Marca
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-widest font-medium">
-                    Preço
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-widest font-medium">
-                    Estoque
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-widest font-medium">
-                    Badge
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-widest font-medium">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs uppercase tracking-widest font-medium">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-noir/5">
-                {rows.map(({ product, stock, fromPrice, variantCount }) => (
-                  <tr key={product.id} className="hover:bg-neutral-50">
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="relative w-14 h-14 bg-noir/5 flex-shrink-0">
-                          <Image
-                            src={product.mainImage}
-                            alt={product.name}
-                            fill
-                            sizes="56px"
-                            className="object-cover"
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-display text-base text-noir truncate">
-                            {product.name}
-                            {product.featured && (
-                              <span className="ml-2 text-xs text-gold-dark">★</span>
-                            )}
-                          </p>
-                          <p className="text-xs text-neutral-500 truncate">
-                            /produtos/{product.slug}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-sm text-noir">
-                      {product.category.name}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-neutral-600">
-                      {product.brand?.name ?? <span className="text-neutral-300">—</span>}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-noir font-medium">
-                      {variantCount > 0 ? (
-                        <span>
-                          <span className="block text-[10px] uppercase tracking-wider text-neutral-400">
-                            a partir de
-                          </span>
-                          {formatPrice(String(fromPrice))}
-                        </span>
-                      ) : (
-                        formatPrice(product.price.toString())
-                      )}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-noir">
-                      {stock === null ? (
-                        <span
-                          className="text-neutral-400"
-                          title="Sem controle de estoque — o site vende sem limite"
-                        >
-                          sem controle
-                        </span>
-                      ) : (
-                        <span className={stock === 0 ? "text-red-600 font-medium" : stock <= 5 ? "text-amber-600 font-medium" : ""}>
-                          {stock}
-                        </span>
-                      )}
-                      {variantCount > 0 && (
-                        <span className="ml-1 text-[10px] text-neutral-400">
-                          em {variantCount} var.
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4">
-                      {product.badge !== "NONE" ? (
-                        <span className={`inline-block px-2 py-0.5 text-[10px] uppercase tracking-widest rounded ${
-                          product.badge === "MAIS_VENDIDO" ? "bg-amber-100 text-amber-800" :
-                          product.badge === "NOVIDADE" ? "bg-emerald-100 text-emerald-800" :
-                          product.badge === "PROMOCAO" ? "bg-red-100 text-red-800" :
-                          product.badge === "EXCLUSIVO" ? "bg-purple-100 text-purple-800" :
-                          "bg-neutral-100 text-neutral-600"
-                        }`}>
-                          {badgeLabels[product.badge] ?? "—"}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-neutral-500">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4">
-                      <span
-                        className={`
-                          inline-block px-3 py-1 text-[10px] uppercase tracking-widest
-                          ${
-                            product.active
-                              ? "bg-green-50 text-green-700"
-                              : "bg-red-50 text-red-700"
-                          }
-                        `}
-                      >
-                        {product.active ? "Ativo" : "Inativo"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <ProductActions
-                        id={product.id}
-                        active={product.active}
-                        featured={product.featured}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
+          {hasFilters && (
+            <div className="px-4 py-2 border-b border-neutral-200 bg-neutral-50">
+              <p className="text-xs text-neutral-500">
+                Filtro ativo — {totalFiltered} de {allCount} produtos no total.
+              </p>
+            </div>
+          )}
+          <ProductsTable
+            rows={tableRows}
+            headers={headers}
+            allFilteredIds={allFilteredIds}
+            categories={categories}
+            brands={brands}
+          />
+          <Pagination
+            total={totalFiltered}
+            page={page}
+            perPage={PER_PAGE}
+            hrefFor={(p) => qs({ pagina: p === 1 ? null : String(p) })}
+            labelSingular="produto"
+            labelPlural="produtos"
+          />
         </div>
       )}
     </div>

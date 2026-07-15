@@ -452,3 +452,126 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
     return { error: "Erro ao deletar produto" };
   }
 }
+
+/* ================================================================
+ * AÇÕES EM MASSA (E5)
+ * ----------------------------------------------------------------
+ * Uma única entrada de atualização (bulkUpdateProducts) com patch
+ * whitelisted, e uma exclusão em massa (bulkDeleteProducts) que só
+ * roda quando TODOS os selecionados estão inativos e sem pedidos.
+ * ================================================================ */
+
+const BULK_LIMIT = 2000;
+const VALID_BADGES = ["NONE", "MAIS_VENDIDO", "NOVIDADE", "PROMOCAO", "EXCLUSIVO"] as const;
+type BulkBadge = (typeof VALID_BADGES)[number];
+
+export interface BulkPatch {
+  active?: boolean;
+  badge?: string;
+  categoryId?: string;
+  brandId?: string | null;
+}
+
+type BulkResult = { success: true; count: number } | { error: string };
+
+function validateIds(ids: unknown): string[] | null {
+  if (!Array.isArray(ids) || ids.length === 0) return null;
+  if (ids.length > BULK_LIMIT) return null;
+  if (!ids.every((i) => typeof i === "string" && i.length > 0)) return null;
+  return ids as string[];
+}
+
+/**
+ * Atualiza um campo em todos os produtos selecionados.
+ * Aceita exatamente UMA operação por chamada (ativar/desativar,
+ * badge, categoria ou marca) — mantém o resultado previsível.
+ */
+export async function bulkUpdateProducts(
+  rawIds: string[],
+  patch: BulkPatch
+): Promise<BulkResult> {
+  await requireAuth();
+
+  const ids = validateIds(rawIds);
+  if (!ids) return { error: "Seleção inválida (vazia ou grande demais)." };
+
+  const data: Record<string, unknown> = {};
+
+  if (typeof patch.active === "boolean") {
+    data.active = patch.active;
+  } else if (typeof patch.badge === "string") {
+    if (!VALID_BADGES.includes(patch.badge as BulkBadge))
+      return { error: "Badge inválido." };
+    data.badge = patch.badge;
+  } else if (typeof patch.categoryId === "string" && patch.categoryId) {
+    const cat = await prisma.category.findUnique({
+      where: { id: patch.categoryId },
+      select: { id: true },
+    });
+    if (!cat) return { error: "Categoria não encontrada." };
+    data.categoryId = patch.categoryId;
+  } else if ("brandId" in patch) {
+    if (patch.brandId === null) {
+      data.brandId = null;
+    } else if (typeof patch.brandId === "string" && patch.brandId) {
+      const brand = await prisma.brand.findUnique({
+        where: { id: patch.brandId },
+        select: { id: true },
+      });
+      if (!brand) return { error: "Marca não encontrada." };
+      data.brandId = patch.brandId;
+    } else {
+      return { error: "Marca inválida." };
+    }
+  } else {
+    return { error: "Nenhuma alteração informada." };
+  }
+
+  const result = await prisma.product.updateMany({
+    where: { id: { in: ids } },
+    data,
+  });
+
+  revalidatePath("/admin/produtos");
+  revalidatePath("/");
+  return { success: true, count: result.count };
+}
+
+/**
+ * Exclui produtos em massa. Regras de segurança (a mesma do botão
+ * individual, em lote):
+ *  1. Todos os selecionados precisam estar INATIVOS — força o fluxo
+ *     "desativar → conferir a vitrine → excluir".
+ *  2. Nenhum pode ter itens de pedido (o histórico de vendas é
+ *     preservado; o banco também bloqueia via FK Restrict).
+ * Variações e imagens caem em cascata; o ledger de estoque é mantido
+ * com referência nula (histórico preservado).
+ */
+export async function bulkDeleteProducts(rawIds: string[]): Promise<BulkResult> {
+  await requireAuth();
+
+  const ids = validateIds(rawIds);
+  if (!ids) return { error: "Seleção inválida (vazia ou grande demais)." };
+
+  const [activeCount, orderRefs] = await Promise.all([
+    prisma.product.count({ where: { id: { in: ids }, active: true } }),
+    prisma.orderItem.count({ where: { productId: { in: ids } } }),
+  ]);
+
+  if (activeCount > 0) {
+    return {
+      error: `${activeCount} do(s) selecionado(s) ainda está(ão) ativo(s). Desative antes de excluir.`,
+    };
+  }
+  if (orderRefs > 0) {
+    return {
+      error: `Exclusão bloqueada: há ${orderRefs} item(ns) de pedido ligados aos selecionados. Mantenha esses produtos desativados para preservar o histórico.`,
+    };
+  }
+
+  const result = await prisma.product.deleteMany({ where: { id: { in: ids } } });
+
+  revalidatePath("/admin/produtos");
+  revalidatePath("/");
+  return { success: true, count: result.count };
+}

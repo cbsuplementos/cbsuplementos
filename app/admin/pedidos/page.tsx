@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { expireStalePendingOrders } from "@/lib/orders";
+import Pagination from "@/components/admin/Pagination";
+
+const PER_PAGE = 25;
 
 export const dynamic = "force-dynamic";
 
@@ -15,13 +18,22 @@ const statusLabels: Record<string, { label: string; color: string }> = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    q?: string;
+    ordem?: string;  // "data" | "total"
+    dir?: string;    // "asc" | "desc"
+    pagina?: string; // 1-based
+  }>;
 }
 
 export default async function AdminPedidosPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const statusFilter = params.status || "";
   const searchTerm = params.q || "";
+  const ordem = params.ordem === "total" ? "total" : "data";
+  const dir: "asc" | "desc" = params.dir === "asc" ? "asc" : "desc";
+  const paginaRaw = parseInt(params.pagina ?? "1", 10);
 
   // Limpa pedidos PENDING expirados antes de calcular métricas e listar,
   // para que não fiquem "presos" no painel aguardando pagamento eterno.
@@ -56,15 +68,49 @@ export default async function AdminPedidosPage({ searchParams }: PageProps) {
     ];
   }
 
+  // ====== PAGINAÇÃO SERVER-SIDE (QW7) ======
+  // Pedidos crescem sem limite, então aqui o corte é no banco
+  // (skip/take), diferente da lista de produtos.
+  const filteredCount = await prisma.order.count({ where });
+  const totalPages = Math.max(1, Math.ceil(filteredCount / PER_PAGE));
+  const page = Math.min(
+    Math.max(1, Number.isFinite(paginaRaw) ? paginaRaw : 1),
+    totalPages
+  );
+
   const orders = await prisma.order.findMany({
     where,
-    orderBy: { createdAt: "desc" },
+    orderBy: ordem === "total" ? { total: dir } : { createdAt: dir },
     include: {
       customer: { select: { name: true, email: true } },
       _count: { select: { items: true } },
     },
-    take: 100,
+    skip: (page - 1) * PER_PAGE,
+    take: PER_PAGE,
   });
+
+  // querystring que preserva filtros + ordenação entre os links
+  const baseParams: Record<string, string> = {};
+  if (statusFilter) baseParams.status = statusFilter;
+  if (searchTerm) baseParams.q = searchTerm;
+  baseParams.ordem = ordem;
+  baseParams.dir = dir;
+  const qs = (overrides: Record<string, string | null>) => {
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries({ ...baseParams, ...overrides })) {
+      if (v !== null && v !== "") sp.set(k, v);
+    }
+    const str = sp.toString();
+    return str ? `/admin/pedidos?${str}` : "/admin/pedidos";
+  };
+  const sortHref = (field: "data" | "total") =>
+    qs({
+      ordem: field,
+      dir: ordem === field ? (dir === "asc" ? "desc" : "asc") : "desc",
+      pagina: null,
+    });
+  const sortIcon = (field: "data" | "total") =>
+    ordem === field ? (dir === "asc" ? "▲" : "▼") : "▵";
 
   const fmt = (v: unknown) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v));
@@ -135,6 +181,8 @@ export default async function AdminPedidosPage({ searchParams }: PageProps) {
       {/* ====== FILTROS ====== */}
       <div className="bg-white p-4 rounded-xl border border-neutral-200 mb-6">
         <form method="GET" className="flex flex-wrap gap-3 items-end">
+          <input type="hidden" name="ordem" value={ordem} />
+          <input type="hidden" name="dir" value={dir} />
           <div className="flex-1 min-w-[200px]">
             <label className="block text-xs font-medium text-neutral-600 mb-1">Buscar</label>
             <input
@@ -170,7 +218,9 @@ export default async function AdminPedidosPage({ searchParams }: PageProps) {
       <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-neutral-200 flex items-center justify-between">
           <p className="text-sm text-neutral-600">
-            Mostrando {orders.length} de {allCount} pedidos
+            {filteredCount === allCount
+              ? `${allCount} pedidos`
+              : `Filtro ativo — ${filteredCount} de ${allCount} pedidos`}
           </p>
         </div>
 
@@ -184,8 +234,16 @@ export default async function AdminPedidosPage({ searchParams }: PageProps) {
                   <th className="text-left px-4 py-3 font-medium text-neutral-600">Pedido</th>
                   <th className="text-left px-4 py-3 font-medium text-neutral-600">Cliente</th>
                   <th className="text-left px-4 py-3 font-medium text-neutral-600">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-neutral-600">Total</th>
-                  <th className="text-left px-4 py-3 font-medium text-neutral-600">Data</th>
+                  <th className="text-left px-4 py-3 font-medium text-neutral-600">
+                    <Link href={sortHref("total")} className="inline-flex items-center gap-1 hover:text-neutral-900">
+                      Total <span className="text-[10px] leading-none">{sortIcon("total")}</span>
+                    </Link>
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium text-neutral-600">
+                    <Link href={sortHref("data")} className="inline-flex items-center gap-1 hover:text-neutral-900">
+                      Data <span className="text-[10px] leading-none">{sortIcon("data")}</span>
+                    </Link>
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -218,6 +276,14 @@ export default async function AdminPedidosPage({ searchParams }: PageProps) {
             </table>
           </div>
         )}
+        <Pagination
+          total={filteredCount}
+          page={page}
+          perPage={PER_PAGE}
+          hrefFor={(p) => qs({ pagina: p === 1 ? null : String(p) })}
+          labelSingular="pedido"
+          labelPlural="pedidos"
+        />
       </div>
     </div>
   );
