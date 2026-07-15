@@ -49,6 +49,26 @@ function parseMoney(raw: string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Resolve a marca do produto: se "newBrandName" foi preenchido, cria/reusa
+ * a marca (upsert por slug) e retorna o id; senão usa o select (ou null).
+ */
+async function resolveBrandId(
+  brandId: string,
+  newBrandName: string
+): Promise<string | null> {
+  if (newBrandName) {
+    const slug = slugify(newBrandName);
+    const brand = await prisma.brand.upsert({
+      where: { slug },
+      update: {},
+      create: { name: newBrandName, slug },
+    });
+    return brand.id;
+  }
+  return brandId || null;
+}
+
 function parseProductForm(formData: FormData) {
   const name = (formData.get("name") as string)?.trim();
   const description = (formData.get("description") as string)?.trim();
@@ -56,6 +76,10 @@ function parseProductForm(formData: FormData) {
   const costPrice = parseMoney(formData.get("costPrice") as string);
   const mainImage = (formData.get("mainImage") as string)?.trim();
   const categoryId = (formData.get("categoryId") as string)?.trim();
+  const brandId = ((formData.get("brandId") as string) ?? "").trim();
+  const newBrandName = ((formData.get("newBrandName") as string) ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
   // Estoque inicial (só usado no CADASTRO):
   //   vazio  → null = sem controle de estoque (o site vende sem limite)
   //   número → estoque inicial, com registro de inventário no histórico
@@ -93,6 +117,8 @@ function parseProductForm(formData: FormData) {
     costPrice,
     mainImage,
     categoryId,
+    brandId,
+    newBrandName,
     stock,
     badge,
     active,
@@ -121,6 +147,7 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
     const slug = await generateUniqueSlug(data.name);
     const session = await auth();
     const userId = (session?.user as { id?: string } | undefined)?.id ?? null;
+    const brandId = await resolveBrandId(data.brandId, data.newBrandName);
 
     // Com variações, o estoque vive nelas — o campo do produto fica nulo.
     const hasVariants = data.variants.length > 0;
@@ -138,6 +165,7 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
         resalePrice: data.price,
         mainImage: data.mainImage,
         categoryId: data.categoryId,
+        brandId,
         stock: productStock,
         badge: data.badge as "NONE" | "MAIS_VENDIDO" | "NOVIDADE" | "PROMOCAO" | "EXCLUSIVO",
         active: data.active,
@@ -233,6 +261,7 @@ export async function updateProduct(
 
   try {
     const slug = await generateUniqueSlug(data.name, id);
+    const brandId = await resolveBrandId(data.brandId, data.newBrandName);
 
     // ============================================================
     // SINCRONIZAÇÃO DE VARIAÇÕES POR ID (nunca "apagar e recriar")
@@ -292,6 +321,7 @@ export async function updateProduct(
           resalePrice: data.price, // espelho — preço de venda unificado
           mainImage: data.mainImage,
           categoryId: data.categoryId,
+          brandId,
           // stock NÃO é tocado aqui: mudanças de estoque passam pelo app de
           // Gestão, que registra a movimentação. Dimensões (peso/altura/etc.)
           // também ficam como estão — o frete é taxa fixa e não as usa.

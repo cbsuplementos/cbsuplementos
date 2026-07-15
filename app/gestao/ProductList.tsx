@@ -19,18 +19,27 @@ export interface ProductRow {
 export function ProductList({ rows }: { rows: ProductRow[] }) {
   const [query, setQuery] = useState("");
   const [onlyStock, setOnlyStock] = useState(false);
+  const [brandSel, setBrandSel] = useState<string | null>(null);
+
+  // Marcas presentes no catálogo (para os chips de filtro)
+  const brands = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) if (r.brand) set.add(r.brand);
+    return [...set].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [rows]);
 
   const filtered = useMemo(() => {
     const q = normalize(query);
     return rows.filter((r) => {
       if (onlyStock && r.totalStock <= 0) return false;
+      if (brandSel && r.brand !== brandSel) return false;
       if (!q) return true;
       return (
         normalize(r.name).includes(q) ||
         (r.brand ? normalize(r.brand).includes(q) : false)
       );
     });
-  }, [rows, query, onlyStock]);
+  }, [rows, query, onlyStock, brandSel]);
 
   return (
     <div>
@@ -55,6 +64,35 @@ export function ProductList({ rows }: { rows: ProductRow[] }) {
             className="w-full rounded-xl border border-white/10 bg-charcoal py-3 pl-11 pr-4 font-sans text-base text-white placeholder:text-cool-gray focus:border-gold/50 focus:outline-none focus:ring-2 focus:ring-gold/20"
           />
         </div>
+
+        {/* Chips de marca (aparecem quando o catálogo tem marcas) */}
+        {brands.length > 0 && (
+          <div className="mt-2 -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none]">
+            <button
+              onClick={() => setBrandSel(null)}
+              className={`shrink-0 rounded-full px-3 py-1 font-sans text-xs font-medium ring-1 transition ${
+                brandSel === null
+                  ? "bg-gold/15 text-gold ring-gold/40"
+                  : "text-cool-gray ring-white/10"
+              }`}
+            >
+              Todas
+            </button>
+            {brands.map((b) => (
+              <button
+                key={b}
+                onClick={() => setBrandSel((cur) => (cur === b ? null : b))}
+                className={`shrink-0 rounded-full px-3 py-1 font-sans text-xs font-medium ring-1 transition ${
+                  brandSel === b
+                    ? "bg-gold/15 text-gold ring-gold/40"
+                    : "text-cool-gray ring-white/10"
+                }`}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="mt-2 flex items-center justify-between">
           <button

@@ -29,7 +29,8 @@ interface PageProps {
     categoria?: string; // ID da categoria
     status?: string;   // "ativo" | "inativo"
     badge?: string;    // enum ProductBadge
-    estoque?: string;  // "baixo" (1-3) | "esgotado" (0)
+    estoque?: string;  // "baixo" (1-5) | "esgotado" (0)
+    marca?: string;    // ID da marca
   }>;
 }
 
@@ -40,6 +41,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   const status = params.status || "";
   const badge = params.badge || "";
   const estoque = params.estoque || "";
+  const marca = params.marca || "";
 
   // Monta o where do Prisma incrementalmente
   const where: Record<string, unknown> = {};
@@ -53,23 +55,30 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   if (status === "ativo") where.active = true;
   if (status === "inativo") where.active = false;
   if (badge && badgeLabels[badge]) where.badge = badge;
+  if (marca === "sem-marca") where.brandId = null;
+  else if (marca) where.brandId = marca;
   // O filtro de estoque NÃO entra no where: produto com variações tem
   // product.stock = 0/null e o estoque real na soma das variações. Ele é
   // aplicado abaixo, em memória, sobre o estoque efetivo.
 
-  const hasFilters = !!(q || categoria || status || badge || estoque);
+  const hasFilters = !!(q || categoria || status || badge || estoque || marca);
 
   // Busca produtos filtrados, categorias (para o select) e total — em paralelo
-  const [products, categories, allCount] = await Promise.all([
+  const [products, categories, brands, allCount] = await Promise.all([
     prisma.product.findMany({
       where,
       orderBy: { createdAt: "desc" },
       include: {
         category: { select: { name: true } },
+        brand: { select: { name: true } },
         variants: { select: { stock: true, price: true } },
       },
     }),
     prisma.category.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.brand.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
@@ -123,6 +132,17 @@ export default async function ProductsPage({ searchParams }: PageProps) {
               <option value="">Todas</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-neutral-600 mb-1">Marca</label>
+            <select name="marca" defaultValue={marca}
+              className="px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-amber-500">
+              <option value="">Todas</option>
+              <option value="sem-marca">Sem marca</option>
+              {brands.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </select>
           </div>
@@ -195,6 +215,9 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                     Categoria
                   </th>
                   <th className="px-4 py-3 text-left text-xs uppercase tracking-widest font-medium">
+                    Marca
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-widest font-medium">
                     Preço
                   </th>
                   <th className="px-4 py-3 text-left text-xs uppercase tracking-widest font-medium">
@@ -240,6 +263,9 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                     </td>
                     <td className="px-4 py-4 text-sm text-noir">
                       {product.category.name}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-neutral-600">
+                      {product.brand?.name ?? <span className="text-neutral-300">—</span>}
                     </td>
                     <td className="px-4 py-4 text-sm text-noir font-medium">
                       {variantCount > 0 ? (

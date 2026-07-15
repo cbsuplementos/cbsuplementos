@@ -19,14 +19,21 @@ interface Category {
   name: string;
 }
 
+interface BrandOption {
+  id: string;
+  name: string;
+}
+
 interface ProductFormProps {
   categories: Category[];
+  brands: BrandOption[];
   product?: {
     id: string;
     name: string;
     description: string;
     price: string;
     costPrice: string;
+    brandId: string;
     mainImage: string;
     categoryId: string;
     stock: number | null;
@@ -57,7 +64,7 @@ interface ProductFormProps {
  * por motoboy com taxa fixa por cidade, então nenhum cálculo usa esses
  * campos. Os valores existentes no banco são preservados.
  */
-export default function ProductForm({ categories, product }: ProductFormProps) {
+export default function ProductForm({ categories, brands, product }: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +133,11 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
     ...categories.map((c) => ({ value: c.id, label: c.name })),
   ];
 
+  const brandOptions = [
+    { value: "", label: "Sem marca" },
+    ...brands.map((b) => ({ value: b.id, label: b.name })),
+  ];
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* ============ SEÇÃO: INFORMAÇÕES BÁSICAS ============ */}
@@ -149,6 +161,21 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
             required
             defaultValue={product?.categoryId ?? ""}
             options={categoryOptions}
+          />
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          <Select
+            label="Marca (opcional)"
+            name="brandId"
+            defaultValue={product?.brandId ?? ""}
+            options={brandOptions}
+          />
+          <Input
+            label="Ou criar nova marca"
+            name="newBrandName"
+            placeholder="Ex: Max Titanium"
+            hint="Preenchido, cria a marca na hora e a usa neste produto (ignora o campo ao lado)."
           />
         </div>
 

@@ -6,11 +6,18 @@ import ProductForm from "@/components/admin/ProductForm";
 export const dynamic = "force-dynamic";
 
 export default async function NewProductPage() {
-  const categories = await prisma.category.findMany({
-    where: { active: true },
-    orderBy: { order: "asc" },
-    select: { id: true, name: true },
-  });
+  const [categories, brands] = await Promise.all([
+    prisma.category.findMany({
+      where: { active: true },
+      orderBy: { order: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.brand.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   // Se não tem categorias, exige criar uma primeiro
   if (categories.length === 0) {
@@ -41,7 +48,7 @@ export default async function NewProductPage() {
         title="Novo Produto"
         description="Adicione um novo produto à vitrine."
       />
-      <ProductForm categories={categories} />
+      <ProductForm categories={categories} brands={brands} />
     </div>
   );
 }

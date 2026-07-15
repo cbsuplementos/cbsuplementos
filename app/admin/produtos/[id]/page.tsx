@@ -12,7 +12,7 @@ export default async function EditProductPage({
 }) {
   const { id } = await params;
 
-  const [product, categories] = await Promise.all([
+  const [product, categories, brands] = await Promise.all([
     prisma.product.findUnique({
       where: { id },
       include: {
@@ -23,6 +23,11 @@ export default async function EditProductPage({
     prisma.category.findMany({
       where: { active: true },
       orderBy: { order: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.brand.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
   ]);
@@ -39,12 +44,14 @@ export default async function EditProductPage({
       />
       <ProductForm
         categories={categories}
+        brands={brands}
         product={{
           id: product.id,
           name: product.name,
           description: product.description,
           price: product.price.toString(),
           costPrice: product.costPrice?.toString() ?? "",
+          brandId: product.brandId ?? "",
           mainImage: product.mainImage,
           categoryId: product.categoryId,
           stock: product.stock,
