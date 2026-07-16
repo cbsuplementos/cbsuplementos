@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getOrder } from "@/lib/mercadopago";
+import { debitOrderStock, returnOrderStock } from "@/lib/order-stock";
 
 /**
  * Webhook do Mercado Pago
@@ -58,47 +59,63 @@ export async function POST(request: Request) {
       mpPaymentId: mpPayment?.id || order.mpPaymentId,
     };
 
+    // Família "pago": estados em que o estoque já foi (ou deve ser) baixado
+    // e que o webhook NÃO pode rebaixar (um webhook atrasado de "approved"
+    // não pode voltar um pedido já em preparação/entregue para "Pago").
+    const paidFamily = ["PAYMENT_APPROVED", "PROCESSING", "SHIPPED", "DELIVERED"];
+
+    let stockNote: string | null = null;
+
     if (paymentStatus === "approved" || paymentStatus === "processed") {
-      updateData.status = "PAYMENT_APPROVED";
-      updateData.paidAt = new Date();
+      if (!paidFamily.includes(order.status)) {
+        updateData.status = "PAYMENT_APPROVED";
+      }
+      updateData.paidAt = order.paidAt ?? new Date();
 
-      // DECREMENTO DE ESTOQUE — apenas se o pedido ainda não foi processado
-      // (idempotência: o MP pode mandar o webhook múltiplas vezes)
-      if (order.status !== "PAYMENT_APPROVED") {
-        const orderItems = await prisma.orderItem.findMany({
-          where: { orderId: order.id },
-          select: { productId: true, variantId: true, quantity: true },
-        });
-
-        // Transação atômica: tudo ou nada
-        await prisma.$transaction(
-          orderItems.map((item) => {
-            if (item.variantId) {
-              // Produto com variante → decrementa variant
-              return prisma.variant.update({
-                where: { id: item.variantId },
-                data: { stock: { decrement: item.quantity } },
-              });
-            } else {
-              // Produto simples → decrementa product
-              return prisma.product.update({
-                where: { id: item.productId },
-                data: { stock: { decrement: item.quantity } },
-              });
-            }
-          })
-        );
-
-        console.log(`[WEBHOOK] Estoque atualizado para ${orderItems.length} itens do pedido ${order.orderNumber}`);
+      // BAIXA DE ESTOQUE com ledger SAIDA_VENDA_SITE (E3).
+      // Idempotente via carimbos do pedido — o MP pode reenviar o webhook
+      // quantas vezes quiser que a baixa acontece uma única vez.
+      const debit = await debitOrderStock(order.id, { origin: "WEBHOOK" });
+      if (debit.done) {
+        stockNote = `Estoque baixado (${debit.items} item${debit.items === 1 ? "" : "ns"})`;
+        console.log(`[WEBHOOK] Estoque baixado: ${debit.items} itens do pedido ${order.orderNumber}`);
       }
     } else if (paymentStatus === "rejected" || paymentStatus === "cancelled") {
-      updateData.status = "CANCELLED";
+      // Só cancela automaticamente se ainda não entrou em preparação/entrega
+      // — a partir daí a decisão é do admin (que devolve estoque ao cancelar).
+      if (order.status === "PENDING" || order.status === "PAYMENT_APPROVED") {
+        updateData.status = "CANCELLED";
+
+        // DEVOLUÇÃO (E3): se este pedido já tinha baixado estoque
+        // (ex.: aprovado e depois estornado), devolve com DEVOLUCAO.
+        const ret = await returnOrderStock(order.id, { origin: "WEBHOOK" });
+        if (ret.done) {
+          stockNote = `Estoque devolvido (${ret.items} item${ret.items === 1 ? "" : "ns"})`;
+          console.log(`[WEBHOOK] Estoque devolvido: ${ret.items} itens do pedido ${order.orderNumber}`);
+        }
+      } else {
+        console.log(`[WEBHOOK] MP diz "${paymentStatus}" mas pedido ${order.orderNumber} está ${order.status} — status mantido para decisão do admin.`);
+      }
     }
 
     await prisma.order.update({
       where: { id: order.id },
       data: updateData,
     });
+
+    // Trilha de auditoria (QW6): registra a transição feita pelo webhook
+    const newStatus = updateData.status as string | undefined;
+    if (newStatus && newStatus !== order.status) {
+      await prisma.orderStatusLog.create({
+        data: {
+          orderId: order.id,
+          fromStatus: order.status,
+          toStatus: newStatus as never,
+          origin: "WEBHOOK",
+          note: [`MP: ${paymentStatus}`, stockNote].filter(Boolean).join(" · "),
+        },
+      });
+    }
 
     console.log(`[WEBHOOK] ✅ Pedido ${order.orderNumber} → ${paymentStatus}`);
 

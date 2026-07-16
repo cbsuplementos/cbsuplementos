@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/db";
-import { StockMovementType } from "@prisma/client";
+import { Prisma, StockMovementType } from "@prisma/client";
+
+/** Cliente dentro de uma transação Prisma (para compor operações). */
+export type TxClient = Prisma.TransactionClient;
 
 /**
  * lib/stock.ts — Operações de estoque atômicas e auditáveis.
@@ -11,8 +14,12 @@ import { StockMovementType } from "@prisma/client";
  * Concorrência: como o site público e este app podem dar baixa no mesmo
  * produto ao mesmo tempo, os decrementos usam `updateMany` com guarda
  * `stock >= quantidade` dentro de uma transação. Se dois pedidos disputam
- * o último item, só um passa — o outro recebe StockError. Nunca vende a
- * descoberto (mesmo princípio do webhook do Mercado Pago).
+ * o último item, só um passa — o outro recebe StockError.
+ *
+ * Exceção deliberada (allowNegative): vendas JÁ PAGAS (webhook do MP ou
+ * confirmação manual no admin) baixam mesmo sem saldo — dinheiro entrou,
+ * o estoque precisa contar a verdade; o negativo aparece em vermelho no
+ * painel para o admin corrigir. Operações do /gestao continuam com guarda.
  */
 
 export class StockError extends Error {
@@ -38,26 +45,43 @@ export async function applyStockDelta(
     reason?: string | null;
     reference?: string | null;
     userId?: string | null;
+    /**
+     * Permite estoque negativo na saída. Usado APENAS para vendas já
+     * confirmadas (dinheiro recebido): a baixa precisa refletir a
+     * realidade mesmo se uma corrida deixou o saldo insuficiente —
+     * o admin enxerga o negativo e corrige, em vez de o webhook falhar.
+     */
+    allowNegative?: boolean;
+    /** Transação externa: quando presente, participa dela em vez de abrir uma. */
+    tx?: TxClient;
   }
 ): Promise<{ stockBefore: number; stockAfter: number }> {
   const variantId = input.variantId ?? null;
   const productId = input.productId ?? null;
   const { delta, type } = input;
+  const allowNegative = input.allowNegative === true;
 
   if (!variantId && !productId) throw new StockError("Produto ou variante não informado.");
   if (!Number.isInteger(delta) || delta === 0) throw new StockError("Quantidade inválida.");
 
-  return prisma.$transaction(async (tx) => {
+  const run = async (tx: TxClient) => {
     let after: number;
     let linkedProductId = productId;
 
     if (variantId) {
       if (delta < 0) {
         const res = await tx.variant.updateMany({
-          where: { id: variantId, stock: { gte: -delta } },
+          where: allowNegative
+            ? { id: variantId }
+            : { id: variantId, stock: { gte: -delta } },
           data: { stock: { decrement: -delta } },
         });
-        if (res.count === 0) throw new StockError("Estoque insuficiente para esta variante.");
+        if (res.count === 0)
+          throw new StockError(
+            allowNegative
+              ? "Variante não encontrada."
+              : "Estoque insuficiente para esta variante."
+          );
       } else {
         const res = await tx.variant.updateMany({
           where: { id: variantId },
@@ -74,10 +98,17 @@ export async function applyStockDelta(
     } else {
       if (delta < 0) {
         const res = await tx.product.updateMany({
-          where: { id: productId!, stock: { gte: -delta } },
+          where: allowNegative
+            ? { id: productId! }
+            : { id: productId!, stock: { gte: -delta } },
           data: { stock: { decrement: -delta } },
         });
-        if (res.count === 0) throw new StockError("Estoque insuficiente para este produto.");
+        if (res.count === 0)
+          throw new StockError(
+            allowNegative
+              ? "Produto não encontrado."
+              : "Estoque insuficiente para este produto."
+          );
       } else {
         const res = await tx.product.updateMany({
           where: { id: productId! },
@@ -107,7 +138,9 @@ export async function applyStockDelta(
     });
 
     return { stockBefore: after - delta, stockAfter: after };
-  });
+  };
+
+  return input.tx ? run(input.tx) : prisma.$transaction(run);
 }
 
 /**
@@ -119,6 +152,8 @@ export async function setStockAbsolute(
     setTo: number;
     reason?: string | null;
     userId?: string | null;
+    /** Transação externa: quando presente, participa dela em vez de abrir uma. */
+    tx?: TxClient;
   }
 ): Promise<{ stockBefore: number; stockAfter: number }> {
   const variantId = input.variantId ?? null;
@@ -128,7 +163,7 @@ export async function setStockAbsolute(
   if (!variantId && !productId) throw new StockError("Produto ou variante não informado.");
   if (!Number.isInteger(after) || after < 0) throw new StockError("Quantidade inválida.");
 
-  return prisma.$transaction(async (tx) => {
+  const run = async (tx: TxClient) => {
     let before: number;
     let linkedProductId = productId;
 
@@ -169,5 +204,7 @@ export async function setStockAbsolute(
     });
 
     return { stockBefore: before, stockAfter: after };
-  });
+  };
+
+  return input.tx ? run(input.tx) : prisma.$transaction(run);
 }

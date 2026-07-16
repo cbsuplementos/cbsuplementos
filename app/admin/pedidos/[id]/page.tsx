@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Image from "next/image";
+import OrderStatusForm from "@/components/admin/OrderStatusForm";
 
 export const dynamic = "force-dynamic";
 
@@ -16,23 +17,6 @@ const statusLabels: Record<string, string> = {
 
 const statusFlow = ["PENDING", "PAYMENT_APPROVED", "PROCESSING", "SHIPPED", "DELIVERED"];
 
-async function updateStatus(formData: FormData) {
-  "use server";
-  const id = formData.get("orderId") as string;
-  const status = formData.get("status") as string;
-  const trackingCode = formData.get("trackingCode") as string;
-
-  await prisma.order.update({
-    where: { id },
-    data: {
-      status: status as never,
-      ...(trackingCode ? { trackingCode } : {}),
-    },
-  });
-
-  redirect(`/admin/pedidos/${id}`);
-}
-
 interface PageProps { params: Promise<{ id: string }> }
 
 export default async function AdminPedidoDetailPage({ params }: PageProps) {
@@ -44,10 +28,25 @@ export default async function AdminPedidoDetailPage({ params }: PageProps) {
       customer: true,
       address: true,
       items: true,
+      statusLogs: { orderBy: { createdAt: "desc" } },
     },
   });
 
   if (!order) notFound();
+
+  // Nomes dos usuários que aparecem na trilha de auditoria
+  const logUserIds = [
+    ...new Set(order.statusLogs.map((l) => l.userId).filter((v): v is string => !!v)),
+  ];
+  const logUsers = logUserIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: logUserIds } },
+        select: { id: true, name: true },
+      })
+    : [];
+  const userName = new Map(logUsers.map((u) => [u.id, u.name]));
+
+  const netDebited = order.stockDebitedAt !== null && order.stockReturnedAt === null;
 
   const fmt = (v: number | unknown) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v));
@@ -78,26 +77,23 @@ export default async function AdminPedidoDetailPage({ params }: PageProps) {
               ))}
             </div>
 
-            <form action={updateStatus} className="flex flex-wrap gap-3 items-end">
-              <input type="hidden" name="orderId" value={order.id} />
-              <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">Alterar status</label>
-                <select name="status" defaultValue={order.status}
-                  className="px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
-                  {Object.entries(statusLabels).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-neutral-600 mb-1">Rastreio (opcional)</label>
-                <input name="trackingCode" type="text" defaultValue={order.trackingCode || ""} placeholder="Código de rastreio"
-                  className="px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
-              </div>
-              <button type="submit" className="px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800">
-                Atualizar
-              </button>
-            </form>
+            {(order.stockDebitedAt || order.stockReturnedAt) && (
+              <p className="text-xs text-neutral-500 mb-4">
+                {netDebited ? (
+                  <>Estoque baixado em {new Date(order.stockDebitedAt!).toLocaleString("pt-BR")}.</>
+                ) : (
+                  <>Estoque devolvido em {new Date(order.stockReturnedAt!).toLocaleString("pt-BR")}.</>
+                )}
+              </p>
+            )}
+
+            <OrderStatusForm
+              orderId={order.id}
+              currentStatus={order.status}
+              trackingCode={order.trackingCode ?? ""}
+              itemCount={order.items.length}
+              netDebited={netDebited}
+            />
           </div>
 
           {/* Itens */}
@@ -118,6 +114,48 @@ export default async function AdminPedidoDetailPage({ params }: PageProps) {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Histórico de status (QW6) */}
+          <div className="bg-white p-6 rounded-xl border border-neutral-200">
+            <h2 className="text-lg font-semibold mb-4">Histórico de status</h2>
+            {order.statusLogs.length === 0 ? (
+              <p className="text-sm text-neutral-400">
+                Nenhuma mudança registrada ainda. (O histórico passou a ser
+                gravado a partir da ativação da auditoria.)
+              </p>
+            ) : (
+              <ol className="space-y-3">
+                {order.statusLogs.map((log) => {
+                  const who =
+                    log.origin === "ADMIN"
+                      ? (log.userId && userName.get(log.userId)) || "Admin"
+                      : log.origin === "WEBHOOK"
+                        ? "Mercado Pago"
+                        : "Sistema";
+                  return (
+                    <li key={log.id} className="flex gap-3 text-sm">
+                      <span className="text-xs text-neutral-400 whitespace-nowrap pt-0.5 w-32 flex-shrink-0">
+                        {new Date(log.createdAt).toLocaleString("pt-BR")}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-neutral-900">
+                          {statusLabels[log.fromStatus] ?? log.fromStatus}
+                          {" → "}
+                          <span className="font-medium">
+                            {statusLabels[log.toStatus] ?? log.toStatus}
+                          </span>
+                        </p>
+                        <p className="text-xs text-neutral-500">
+                          por {who}
+                          {log.note ? ` · ${log.note}` : ""}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
           </div>
         </div>
 

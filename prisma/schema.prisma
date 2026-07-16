@@ -264,12 +264,20 @@ model Order {
   paymentMethod    String?
   paymentStatus    String?
   paidAt           DateTime?
+  // Controle de baixa/devolução de estoque (E3):
+  // stockDebitedAt  = quando a venda baixou o estoque (webhook ou manual)
+  // stockReturnedAt = quando o cancelamento devolveu o estoque
+  // "Baixado agora" = stockDebitedAt != null && stockReturnedAt == null.
+  // Reativar um pedido devolvido baixa de novo e zera stockReturnedAt.
+  stockDebitedAt   DateTime?
+  stockReturnedAt  DateTime?
   customerId       String
   addressId        String?
   notes            String?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
   items            OrderItem[]
+  statusLogs       OrderStatusLog[]
   address          Address?    @relation(fields: [addressId], references: [id])
   customer         Customer    @relation(fields: [customerId], references: [id])
 
@@ -296,6 +304,25 @@ model OrderItem {
 
   @@index([orderId])
   @@map("order_items")
+}
+
+/// Trilha de auditoria de mudanças de status de pedido (QW6).
+/// origin: "ADMIN" (painel, com userId), "WEBHOOK" (Mercado Pago),
+/// "SYSTEM" (expiração automática de PENDING).
+/// userId segue o padrão do StockMovement: string solta, sem FK.
+model OrderStatusLog {
+  id         String      @id @default(cuid())
+  orderId    String
+  fromStatus OrderStatus
+  toStatus   OrderStatus
+  origin     String
+  note       String?
+  userId     String?
+  createdAt  DateTime    @default(now())
+  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("order_status_logs")
 }
 
 enum HeroContentPosition {
