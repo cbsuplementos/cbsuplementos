@@ -5,6 +5,10 @@ import { ProductList, type ProductRow } from "./ProductList";
 export const dynamic = "force-dynamic";
 
 export default async function GestaoHome() {
+  const pickingCount = await prisma.order.count({
+    where: { status: "PAYMENT_APPROVED" },
+  });
+
   const products = await prisma.product.findMany({
     orderBy: { name: "asc" },
     select: {
@@ -49,6 +53,29 @@ export default async function GestaoHome() {
 
   return (
     <>
+      <Link
+        href="/gestao/picking"
+        className="mb-3 flex items-center gap-3 rounded-xl border border-gold/20 bg-gold/5 p-3 transition active:scale-[0.99]"
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gold/15 text-gold">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+          </svg>
+        </div>
+        <div className="flex-1">
+          <p className="font-sans text-sm font-medium text-white">Separação de pedidos</p>
+          <p className="font-sans text-xs text-cool-gray">Pedidos pagos aguardando preparação</p>
+        </div>
+        {pickingCount > 0 && (
+          <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-gold px-2 font-sans text-xs font-bold text-noir">
+            {pickingCount}
+          </span>
+        )}
+        <svg className="h-5 w-5 text-cool-gray" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
+      </Link>
+
       <Link
         href="/gestao/entrada-nota"
         className="mb-3 flex items-center gap-3 rounded-xl border border-gold/20 bg-gold/5 p-3 transition active:scale-[0.99]"

@@ -82,7 +82,8 @@ export default async function AdminPedidosPage({ searchParams }: PageProps) {
     where,
     orderBy: ordem === "total" ? { total: dir } : { createdAt: dir },
     include: {
-      customer: { select: { name: true, email: true } },
+      customer: { select: { name: true, email: true, phone: true } },
+      address: { select: { city: true, state: true, neighborhood: true } },
       _count: { select: { items: true } },
     },
     skip: (page - 1) * PER_PAGE,
@@ -111,6 +112,19 @@ export default async function AdminPedidosPage({ searchParams }: PageProps) {
     });
   const sortIcon = (field: "data" | "total") =>
     ordem === field ? (dir === "asc" ? "▲" : "▼") : "▵";
+
+  /**
+   * Link de WhatsApp a partir do telefone salvo (QW5).
+   * Normaliza para dígitos e garante o DDI 55 (números BR têm 10-11
+   * dígitos com DDD). Retorna null se o telefone não parecer válido.
+   */
+  const whatsappHref = (phone: string | null): string | null => {
+    if (!phone) return null;
+    let digits = phone.replace(/\D/g, "");
+    if (digits.length === 10 || digits.length === 11) digits = `55${digits}`;
+    if (digits.length < 12 || digits.length > 13) return null;
+    return `https://wa.me/${digits}`;
+  };
 
   const fmt = (v: unknown) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v));
@@ -233,6 +247,7 @@ export default async function AdminPedidosPage({ searchParams }: PageProps) {
                 <tr className="bg-neutral-50 border-b border-neutral-200">
                   <th className="text-left px-4 py-3 font-medium text-neutral-600">Pedido</th>
                   <th className="text-left px-4 py-3 font-medium text-neutral-600">Cliente</th>
+                  <th className="text-left px-4 py-3 font-medium text-neutral-600">Cidade</th>
                   <th className="text-left px-4 py-3 font-medium text-neutral-600">Status</th>
                   <th className="text-left px-4 py-3 font-medium text-neutral-600">
                     <Link href={sortHref("total")} className="inline-flex items-center gap-1 hover:text-neutral-900">
@@ -256,13 +271,44 @@ export default async function AdminPedidosPage({ searchParams }: PageProps) {
                       <td className="px-4 py-3">
                         <p className="font-medium text-neutral-900">{order.customer.name}</p>
                         <p className="text-xs text-neutral-500">{order.customer.email}</p>
+                        {(() => {
+                          const wa = whatsappHref(order.customer.phone);
+                          if (!wa) return null;
+                          return (
+                            <a
+                              href={wa}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-700"
+                              title={`WhatsApp: ${order.customer.phone}`}
+                            >
+                              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                                <path d="M12.04 2c-5.46 0-9.9 4.44-9.9 9.9 0 1.75.46 3.45 1.32 4.95L2 22l5.3-1.39c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.9-4.44 9.9-9.9S17.5 2 12.04 2zm0 18.02c-1.48 0-2.94-.4-4.2-1.15l-.3-.18-3.14.82.84-3.07-.2-.31a8.04 8.04 0 01-1.23-4.28c0-4.45 3.62-8.07 8.07-8.07s8.07 3.62 8.07 8.07-3.62 8.17-7.91 8.17zm4.43-6.05c-.24-.12-1.43-.71-1.66-.79-.22-.08-.38-.12-.55.12-.16.24-.63.79-.77.95-.14.16-.28.18-.53.06-.24-.12-1.02-.38-1.95-1.2-.72-.64-1.2-1.43-1.35-1.67-.14-.24-.01-.37.11-.5.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.55-1.32-.75-1.8-.2-.48-.4-.42-.55-.42l-.47-.01c-.16 0-.42.06-.65.3-.22.24-.85.83-.85 2.03s.87 2.36 1 2.52c.12.16 1.72 2.62 4.16 3.68.58.25 1.04.4 1.39.51.58.19 1.12.16 1.54.1.47-.07 1.43-.58 1.63-1.15.2-.56.2-1.05.14-1.15-.06-.1-.22-.16-.46-.28z" />
+                              </svg>
+                              WhatsApp
+                            </a>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-neutral-600">
+                        {order.address ? (
+                          <>
+                            <p>{order.address.city}/{order.address.state}</p>
+                            <p className="text-neutral-400">{order.address.neighborhood}</p>
+                          </>
+                        ) : (
+                          <span className="text-neutral-300">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${s.color}`}>{s.label}</span>
                       </td>
                       <td className="px-4 py-3 font-medium">{fmt(order.total)}</td>
-                      <td className="px-4 py-3 text-neutral-500 text-xs">
-                        {new Date(order.createdAt).toLocaleDateString("pt-BR")}
+                      <td className="px-4 py-3 text-neutral-500 text-xs whitespace-nowrap">
+                        <p>{new Date(order.createdAt).toLocaleDateString("pt-BR")}</p>
+                        <p className="text-neutral-400">
+                          {new Date(order.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                        </p>
                       </td>
                       <td className="px-4 py-3">
                         <Link href={`/admin/pedidos/${order.id}`} className="text-amber-600 hover:text-amber-700 text-xs font-medium">
