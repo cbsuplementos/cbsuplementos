@@ -53,7 +53,7 @@ interface PageProps {
     categoria?: string; // ID da categoria
     status?: string;   // "ativo" | "inativo"
     badge?: string;    // enum ProductBadge
-    estoque?: string;  // "baixo" (1-5) | "esgotado" (0)
+    estoque?: string;  // "baixo" (1-5) | "esgotado" (0) | "repor" (<= mínimo)
     marca?: string;    // ID da marca | "sem-marca"
     ordem?: string;    // campo de ordenação
     dir?: string;      // "asc" | "desc"
@@ -103,7 +103,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
       include: {
         category: { select: { name: true } },
         brand: { select: { name: true } },
-        variants: { select: { stock: true, price: true } },
+        variants: { select: { stock: true, price: true, minStock: true, active: true } },
       },
     }),
     prisma.category.findMany({
@@ -122,11 +122,18 @@ export default async function ProductsPage({ searchParams }: PageProps) {
     .map((product) => {
       const stock = effectiveStock(product.stock, product.variants);
       const fromPrice = startingPrice(product.price, product.variants);
+      // "Repor" (E6): alguma variação ATIVA no mínimo ou abaixo; sem
+      // variações, o próprio produto (null = sem controle ⇒ nunca).
+      const needsRestock =
+        product.variants.length > 0
+          ? product.variants.some((v) => v.active && v.stock <= v.minStock)
+          : product.stock !== null && product.stock <= product.minStock;
       return {
         product,
         stock,
         fromPrice,
         variantCount: product.variants.length,
+        needsRestock,
         // chaves de ordenação pré-calculadas
         sortName: product.name,
         sortCategory: product.category.name,
@@ -141,6 +148,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
       if (estoque === "esgotado") return r.stock === 0;
       if (estoque === "baixo")
         return r.stock !== null && r.stock > 0 && r.stock <= 5;
+      if (estoque === "repor") return r.needsRestock;
       return true;
     });
 
@@ -251,6 +259,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
     hasVariants: r.variantCount > 0,
     variantCount: r.variantCount,
     stock: r.stock,
+    needsRestock: r.needsRestock,
     badge: r.product.badge,
     active: r.product.active,
     featured: r.product.featured,
@@ -331,6 +340,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
               <option value="">Todos</option>
               <option value="baixo">Baixo (1-5)</option>
               <option value="esgotado">Esgotado (0)</option>
+              <option value="repor">Abaixo do mínimo (Repor)</option>
             </select>
           </div>
           <button type="submit" className="px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800">

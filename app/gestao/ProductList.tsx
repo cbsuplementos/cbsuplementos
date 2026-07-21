@@ -12,6 +12,7 @@ export interface ProductRow {
   brand: string | null;
   active: boolean;
   totalStock: number;
+  needsRestock: boolean;
   variantCount: number;
   fromPrice: number | null;
 }
@@ -160,8 +161,16 @@ export function ProductList({ rows }: { rows: ProductRow[] }) {
                   </div>
                 </div>
 
-                <div className="shrink-0">
+                <div className="flex shrink-0 flex-col items-end gap-1">
                   <StockPill qty={r.totalStock} size="md" />
+                  {r.needsRestock && (
+                    <span
+                      className="rounded bg-amber-400/15 px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-wider text-amber-300"
+                      title="No estoque mínimo ou abaixo"
+                    >
+                      Repor
+                    </span>
+                  )}
                 </div>
               </Link>
             </li>

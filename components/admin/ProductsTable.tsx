@@ -42,6 +42,7 @@ export interface TableRow {
   hasVariants: boolean;
   variantCount: number;
   stock: number | null;
+  needsRestock: boolean;
   badge: string;
   active: boolean;
   featured: boolean;
@@ -435,6 +436,14 @@ export default function ProductsTable({
                   {r.variantCount > 0 && (
                     <span className="ml-1 text-[10px] text-neutral-400">
                       em {r.variantCount} var.
+                    </span>
+                  )}
+                  {r.needsRestock && (
+                    <span
+                      className="ml-1.5 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700"
+                      title="No estoque mínimo ou abaixo"
+                    >
+                      Repor
                     </span>
                   )}
                 </td>

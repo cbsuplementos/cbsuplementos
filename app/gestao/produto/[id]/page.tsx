@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { brl } from "../../lib";
 import { StockPill } from "../../StockPill";
 import { StockPanel, type PanelVariant } from "./StockPanel";
@@ -14,6 +15,11 @@ export default async function ProdutoDetalhe({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  // E8 — papéis: STAFF não vê custo (o dado nem sai do servidor).
+  const session = await auth();
+  const isAdmin =
+    ((session?.user as { role?: string } | undefined)?.role ?? "") === "ADMIN";
 
   const product = await prisma.product.findUnique({
     where: { id },
@@ -53,7 +59,7 @@ export default async function ProdutoDetalhe({
         id: v.id,
         name: v.name,
         stock: v.stock,
-        cost: v.costPrice != null ? Number(v.costPrice) : null,
+        cost: isAdmin && v.costPrice != null ? Number(v.costPrice) : null,
         resale: Number(v.price), // preço de venda unificado (== site)
       }))
     : [
@@ -61,7 +67,7 @@ export default async function ProdutoDetalhe({
           id: null,
           name: "Produto",
           stock: product.stock ?? 0,
-          cost: product.costPrice != null ? Number(product.costPrice) : null,
+          cost: isAdmin && product.costPrice != null ? Number(product.costPrice) : null,
           resale: Number(product.price), // preço de venda unificado (== site)
         },
       ];

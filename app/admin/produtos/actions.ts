@@ -49,6 +49,12 @@ function parseMoney(raw: string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Estoque mínimo saneado (E6): inteiro >= 0, senão o default 5. */
+function sanitizeMinStock(n: unknown): number {
+  const x = typeof n === "number" ? n : parseInt(String(n ?? ""), 10);
+  return Number.isInteger(x) && x >= 0 ? x : 5;
+}
+
 /**
  * Resolve a marca do produto: se "newBrandName" foi preenchido, cria/reusa
  * a marca (upsert por slug) e retorna o id; senão usa o select (ou null).
@@ -83,6 +89,10 @@ function parseProductForm(formData: FormData) {
   // Estoque inicial (só usado no CADASTRO):
   //   vazio  → null = sem controle de estoque (o site vende sem limite)
   //   número → estoque inicial, com registro de inventário no histórico
+  const minStockNum = parseInt(String(formData.get("minStock") ?? ""), 10);
+  const minStock =
+    Number.isInteger(minStockNum) && minStockNum >= 0 ? minStockNum : 5;
+
   const stockRaw = ((formData.get("stock") as string) ?? "").trim();
   const stock =
     stockRaw === "" ? null : Math.max(0, parseInt(stockRaw, 10) || 0);
@@ -101,6 +111,7 @@ function parseProductForm(formData: FormData) {
     price: string;
     costPrice?: string;
     stock: number;
+    minStock?: number;
     sku: string;
     active: boolean;
   }[] = [];
@@ -120,6 +131,7 @@ function parseProductForm(formData: FormData) {
     brandId,
     newBrandName,
     stock,
+    minStock,
     badge,
     active,
     featured,
@@ -167,6 +179,7 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
         categoryId: data.categoryId,
         brandId,
         stock: productStock,
+        minStock: data.minStock,
         badge: data.badge as "NONE" | "MAIS_VENDIDO" | "NOVIDADE" | "PROMOCAO" | "EXCLUSIVO",
         active: data.active,
         featured: data.featured,
@@ -188,6 +201,7 @@ export async function createProduct(formData: FormData): Promise<ActionResult> {
               costPrice: parseMoney(v.costPrice),
               resalePrice: vPrice,
               stock: v.stock || 0,
+              minStock: sanitizeMinStock(v.minStock),
               sku: v.sku || null,
               active: v.active,
             };
@@ -322,6 +336,7 @@ export async function updateProduct(
           mainImage: data.mainImage,
           categoryId: data.categoryId,
           brandId,
+          minStock: data.minStock,
           // stock NÃO é tocado aqui: mudanças de estoque passam pelo app de
           // Gestão, que registra a movimentação. Dimensões (peso/altura/etc.)
           // também ficam como estão — o frete é taxa fixa e não as usa.
@@ -349,6 +364,7 @@ export async function updateProduct(
             price: vPrice,
             costPrice: parseMoney(v.costPrice),
             resalePrice: vPrice,
+            minStock: sanitizeMinStock(v.minStock),
             sku: v.sku || null,
             active: v.active,
             // stock preservado — só muda por movimentação registrada
@@ -364,6 +380,7 @@ export async function updateProduct(
             price: vPrice,
             costPrice: parseMoney(v.costPrice),
             resalePrice: vPrice,
+            minStock: sanitizeMinStock(v.minStock),
             sku: v.sku || null,
             active: v.active,
             stock: 0, // nova variação nasce zerada; entrada pelo /gestao

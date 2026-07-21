@@ -49,9 +49,11 @@ export function StockPanel({
                   <p className="font-sans text-sm font-medium text-white">{v.name}</p>
                 )}
                 <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 font-sans text-xs text-cool-gray">
-                  <span>
-                    Custo <span className="text-white/80">{brl(v.cost)}</span>
-                  </span>
+                  {v.cost != null && (
+                    <span>
+                      Custo <span className="text-white/80">{brl(v.cost)}</span>
+                    </span>
+                  )}
                   <span>
                     Venda <span className="text-gold">{brl(v.resale)}</span>
                   </span>

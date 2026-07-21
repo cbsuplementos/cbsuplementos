@@ -18,9 +18,10 @@ export default async function GestaoHome() {
       stock: true,
       active: true,
       price: true,
+      minStock: true,
       brand: { select: { name: true } },
       variants: {
-        select: { id: true, stock: true, price: true },
+        select: { id: true, stock: true, price: true, minStock: true, active: true },
       },
     },
   });
@@ -34,6 +35,12 @@ export default async function GestaoHome() {
     // preço de venda "a partir de" (menor entre as variações / produto).
     // Fonte única: `price` — é o que o site cobra (revenda == preço do site,
     // decisão de 02/07; `resalePrice` virou espelho legado).
+    // "Repor" (E6): alguma variação ATIVA no mínimo ou abaixo; sem
+    // variações, o próprio produto (null = sem controle => nunca).
+    const needsRestock = hasVariants
+      ? p.variants.some((v) => v.active && v.stock <= v.minStock)
+      : p.stock !== null && p.stock <= p.minStock;
+
     const priceCandidates = hasVariants
       ? p.variants.map((v) => Number(v.price))
       : [Number(p.price)];
@@ -46,6 +53,7 @@ export default async function GestaoHome() {
       brand: p.brand?.name ?? null,
       active: p.active,
       totalStock,
+      needsRestock,
       variantCount: p.variants.length,
       fromPrice: Number.isFinite(fromPrice) ? fromPrice : null,
     };

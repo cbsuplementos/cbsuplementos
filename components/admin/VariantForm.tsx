@@ -8,6 +8,7 @@ export interface VariantData {
   price: string;
   costPrice: string;
   stock: number;
+  minStock: number;
   sku: string;
   active: boolean;
 }
@@ -49,6 +50,7 @@ export default function VariantForm({ variants, onChange, productEditing }: Vari
       price: "",
       costPrice: "",
       stock: 0,
+      minStock: 5,
       sku: "",
       active: true,
     };
@@ -189,6 +191,23 @@ export default function VariantForm({ variants, onChange, productEditing }: Vari
                   </div>
 
                   {/* Estoque: inicial no cadastro; somente leitura na edição */}
+                  {productEditing && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelClass}>Estoque mínimo</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={variant.minStock}
+                          onChange={(e) => updateVariant(index, "minStock", parseInt(e.target.value) || 0)}
+                          className={inputClass}
+                        />
+                        <p className="mt-1 text-[11px] text-neutral-400">
+                          Alerta &quot;Repor&quot; quando o estoque ficar igual ou abaixo.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   {productEditing ? (
                     <div className="rounded bg-neutral-50 border border-noir/10 px-3 py-2.5">
                       {variant.id ? (
@@ -222,6 +241,19 @@ export default function VariantForm({ variants, onChange, productEditing }: Vari
                         />
                         <p className="mt-1 text-[11px] text-neutral-400">
                           Gera um registro de inventário inicial no histórico.
+                        </p>
+                      </div>
+                      <div>
+                        <label className={labelClass}>Estoque mínimo</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={variant.minStock}
+                          onChange={(e) => updateVariant(index, "minStock", parseInt(e.target.value) || 0)}
+                          className={inputClass}
+                        />
+                        <p className="mt-1 text-[11px] text-neutral-400">
+                          Alerta &quot;Repor&quot; quando o estoque ficar igual ou abaixo.
                         </p>
                       </div>
                     </div>

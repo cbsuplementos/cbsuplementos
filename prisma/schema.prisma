@@ -40,6 +40,8 @@ model Product {
   featured    Boolean        @default(false)
   badge       ProductBadge   @default(NONE)
   stock       Int?           @default(0)
+  /// Estoque mínimo (E6): alerta "Repor" quando o efetivo fica <= isto.
+  minStock    Int            @default(5)
   costPrice   Decimal?       @db.Decimal(10, 2)
   resalePrice Decimal?       @db.Decimal(10, 2)
   brandId     String?
@@ -85,6 +87,8 @@ model Variant {
   costPrice   Decimal?   @db.Decimal(10, 2)
   resalePrice Decimal?   @db.Decimal(10, 2)
   stock      Int         @default(0)
+  /// Estoque mínimo por variação (E6).
+  minStock   Int         @default(5)
   attributes Json?
   productId  String
   active     Boolean     @default(true)

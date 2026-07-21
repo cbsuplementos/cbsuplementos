@@ -68,7 +68,11 @@ export default async function DashboardPage() {
     prisma.order.count({ where: { status: "PENDING" } }),
     prisma.product.findMany({
       where: { active: true },
-      select: { stock: true, variants: { select: { stock: true } } },
+      select: {
+        stock: true,
+        minStock: true,
+        variants: { select: { stock: true, minStock: true, active: true } },
+      },
     }),
     prisma.product.count({ where: { brandId: null } }),
     prisma.order.findMany({
@@ -80,13 +84,17 @@ export default async function DashboardPage() {
 
   // Estoque efetivo (regra única do site) só entre os ATIVOS —
   // os importados inativos não contam como "esgotados".
-  let lowStock = 0;
+  let belowMin = 0;
   let outOfStock = 0;
   const activeCount = products.length;
   for (const p of products) {
     const s = effectiveStock(p.stock, p.variants);
     if (s === 0) outOfStock++;
-    else if (s !== null && s <= 5) lowStock++;
+    const needsRestock =
+      p.variants.length > 0
+        ? p.variants.some((v) => v.active && v.stock <= v.minStock)
+        : p.stock !== null && p.stock <= p.minStock;
+    if (needsRestock) belowMin++;
   }
 
   const monthRevenue = monthAgg._sum.total;
@@ -131,10 +139,10 @@ export default async function DashboardPage() {
       href: "/admin/produtos?status=ativo",
     },
     {
-      label: "Estoque baixo",
-      value: String(lowStock),
-      hint: "Ativos com 1–5 unidades",
-      href: "/admin/produtos?status=ativo&estoque=baixo",
+      label: "Repor",
+      value: String(belowMin),
+      hint: "No estoque mínimo ou abaixo",
+      href: "/admin/produtos?status=ativo&estoque=repor",
     },
     {
       label: "Esgotados",

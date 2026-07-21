@@ -37,6 +37,7 @@ interface ProductFormProps {
     mainImage: string;
     categoryId: string;
     stock: number | null;
+    minStock: number;
     badge: string;
     active: boolean;
     featured: boolean;
@@ -227,6 +228,17 @@ export default function ProductForm({ categories, brands, product }: ProductForm
         {/* ===== ESTOQUE ===== */}
         {isEditing ? (
           !hasVariants && (
+            <div className="space-y-4">
+            <div className="grid lg:grid-cols-3 gap-6">
+              <Input
+                label="Estoque mínimo"
+                name="minStock"
+                type="number"
+                min={0}
+                defaultValue={String(product?.minStock ?? 5)}
+                hint='Alerta "Repor" quando o estoque ficar igual ou abaixo.'
+              />
+            </div>
             <div className="rounded-lg bg-neutral-50 border border-noir/10 px-4 py-3">
               <p className="text-sm text-noir/70">
                 Estoque atual:{" "}
@@ -242,6 +254,7 @@ export default function ProductForm({ categories, brands, product }: ProductForm
                 </span>
               </p>
             </div>
+            </div>
           )
         ) : (
           !hasVariants && (
@@ -254,6 +267,14 @@ export default function ProductForm({ categories, brands, product }: ProductForm
                 defaultValue=""
                 placeholder="Ex: 12"
                 hint="Vazio = sem controle de estoque (o site vende sem limite). Preenchido, gera registro de inventário inicial."
+              />
+              <Input
+                label="Estoque mínimo"
+                name="minStock"
+                type="number"
+                min={0}
+                defaultValue="5"
+                hint='Alerta "Repor" quando o estoque ficar igual ou abaixo.'
               />
             </div>
           )
